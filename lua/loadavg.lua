@@ -6,7 +6,7 @@ local SCRIPT_NAME	= "loadavg"
 local SCRIPT_AUTHOR	= "phyber"
 local SCRIPT_VERSION	= "1.0"
 local SCRIPT_LICENSE	= "GPL3"
-local SCRIPT_DESC	= "Display loadavg on a bar."
+local SCRIPT_DESC	= "Display load averages as a bar item."
 
 local SCRIPT_CONF = {
 	proc_loadavg	= {
@@ -19,21 +19,32 @@ local SCRIPT_CONF = {
 	},
 }
 
-local function print(msg)
-	weechat.print("", msg)
-end
-
+--[[
+-- Config callback.
+-- Handles configuration changes.
+--]]
 function loadavg_config_cb(data, option, value)
-	weechat.unhook('loadavg_timer_cb')
-	weechat.hook_timer(tonumber(weechat.config_get_plugin('refresh_rate')) * 1000, 0, 0, 'loadavg_timer_cb', nil)
+	-- Reset the timer if the refresh_rate changes.
+	if option == "plugins.var.lua.".. SCRIPT_NAME ..".refresh_rate" then
+		weechat.unhook('loadavg_timer_cb')
+		weechat.hook_timer(tonumber(weechat.config_get_plugin('refresh_rate')) * 1000, 0, 0, 'loadavg_timer_cb', nil)
+	end
 	return weechat.WEECHAT_RC_OK
 end
 
+--[[
+-- Timer callback.
+-- Handles updating the bar item every refresh_rate seconds.
+--]]
 function loadavg_timer_cb()
 	weechat.bar_item_update('loadavg')
 	return weechat.WEECHAT_RC_OK
 end
 
+--[[
+-- Item callback.
+-- Returns the item text.
+--]]
 function loadavg_item_cb()
 	local f = io.open(weechat.config_get_plugin('proc_loadavg'))
 	if f then
@@ -52,6 +63,7 @@ for k, v in pairs(SCRIPT_CONF) do
 	if weechat.config_is_set_plugin(k) == 0 then
 		weechat.config_set_plugin(k, v[1])
 	end
+	-- If WeeChat >= 0.3.5 we can set descriptions for the config options.
 	if tonumber(weechat.info_get('version_number', '')) >= 0x00030500 then
 		weechat.config_set_desc_plugin(k, v[2])
 	end
