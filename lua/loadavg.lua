@@ -20,7 +20,7 @@ local SCRIPT_CONF = {
 }
 
 local function print(msg)
-	weechat.print(weechat.current_buffer(), msg)
+	weechat.print("", msg)
 end
 
 function loadavg_config_cb(data, option, value)
@@ -42,7 +42,7 @@ function loadavg_item_cb()
 		loadavg = loadavg:gsub("^([%w.]+) ([%w.]+) ([%w.]+).*", "%1 %2 %3")
 		return loadavg
 	else
-		return ""
+		return "N/A"
 	end
 end
 
