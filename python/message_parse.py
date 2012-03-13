@@ -50,6 +50,15 @@ def privmsg_cb(userdata, signal, signal_data):
 
 	return weechat.WEECHAT_RC_OK
 
+def privmsg_modifier_cb(userdata, modifier, servername, raw_irc_msg):
+	weechat.prnt("", "{}".format(userdata))
+	weechat.prnt("", "{}".format(modifier))
+	weechat.prnt("", "{}".format(servername))
+	weechat.prnt("", "{}".format(raw_irc_msg))
+
+	return "{} {}".format(raw_irc_msg, servername)
+
 if __name__ == '__main__':
 	if weechat.register("message_parse", "phyber", "0.1", "GPL3", "Shows details about incoming private message.", "", ""):
 		weechat.hook_signal("*,irc_in_privmsg", "privmsg_cb", "")
+		weechat.hook_modifier("irc_in_privmsg", "privmsg_modifier_cb", "")
