@@ -18,7 +18,6 @@ def parse_message(server, signal_data):
 		"nick": nick,
 	}
 	"""
-	version = weechat.info_get("version_number", "") or 0
 	details = {}
 	if int(version) >= 0x00030400:
 		# WeeChat >= 0.3.4, use the built-in irc_message_parse
@@ -60,5 +59,6 @@ def privmsg_modifier_cb(userdata, modifier, servername, raw_irc_msg):
 
 if __name__ == '__main__':
 	if weechat.register("message_parse", "phyber", "0.1", "GPL3", "Shows details about incoming private message.", "", ""):
+		version = weechat.info_get("version_number", "") or 0
 		weechat.hook_signal("*,irc_in_privmsg", "privmsg_cb", "")
 		weechat.hook_modifier("irc_in_privmsg", "privmsg_modifier_cb", "")
