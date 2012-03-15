@@ -6,6 +6,32 @@ SCRIPT_DESC	= "Block private messages from people not on your whitelist."
 SCRIPT_COMMAND	= SCRIPT_NAME
 
 WHITELIST_CONFIG = {
+	"general": {
+		'notification': {
+			"type":			"boolean",
+			"desc":			"Receive a notification when a message is blocked",
+			"min":			0,
+			"max":			0,
+			"string_values":	"",
+			"default":		"on",
+			"value":		"on",
+			"check_cb":		"",
+			"change_cb":		"",
+			"delete_cb":		"",
+		},
+		'logging': {
+			"type":			"boolean",
+			"desc":			"Log blocked private messages",
+			"min":			0,
+			"max":			0,
+			"string_values":	"",
+			"default":		"on",
+			"value":		"on",
+			"check_cb":		"",
+			"change_cb":		"",
+			"delete_cb":		"",
+		},
+	},
 	"whitelists": {
 		'channels': {
 			"type":			"string",
@@ -64,22 +90,28 @@ except:
 	import sys
 	print("This script must be run under WeeChat")
 	sys.exit(1)
+import re
+import time
 
 def parse_message(server, signal_data):
 	details = {}
-	if int(version) >= 0x00030400:
+	if int(weechat_version) >= 0x00030400:
+		# Newer (>=0.3.4) versions of WeeChat can prepare a hash with most of
+		# what we want.
 		details = weechat.info_get_hashtable("irc_message_parse", {
 			"message":	signal_data,
 			"server":	server
 		})
 	else:
+		# WeeChat <0.3.4 we have to construct it ourselves.
 		(source, command, channel, message) = signal_data.split(" ", 3)
 		details['arguments'] = "{} {}".format(channel, message)
 		details['channel'] = channel
 		details['command'] = command
 		details['host'] = source.lstrip(":")
 		details['nick'] = weechat.info_get("irc_nick_from_host", signal_data)
-	
+
+	# WeeChat leaves this important part to us. Get the actual message.
 	details['message'] = details['arguments'].split(" :", 1)[1]
 
 	return details
@@ -88,23 +120,20 @@ def whitelist_config_init():
 	config_file = weechat.config_new("whitelist", "whitelist_config_reload_cb", "")
 	if not config_file:
 		return
-	config_section = {}
 
 	for section in WHITELIST_CONFIG:
-		#weechat.prnt("", "Section: {}".format(section))
-		config_section[section] = weechat.config_new_section(
+		config_section = weechat.config_new_section(
 			config_file,
 			section,
 			0, 0, "", "", "", "", "", "", "", "", "", ""
 		)
-		if not config_section[section]:
+		if not config_section:
 			weechat.config_free(config_file)
 			return
 		for option_name, props in WHITELIST_CONFIG[section].items():
-			#weechat.prnt("", "Option: {}".format(option_name))
 			weechat.config_new_option(
 				config_file,
-				config_section[section],
+				config_section,
 				option_name,
 				props['type'],
 				props['desc'],
@@ -131,9 +160,12 @@ def whitelist_config_reload_cb(userdata, config_file):
 	return weechat.WEECHAT_CONFIG_READ_OK
 
 def whitelist_config_get_value(section_name, option_name):
+	# This is a lot of work to just get the value of an option.
 	section = weechat.config_search_section(config_file, section_name)
 	option = weechat.config_search_option(config_file, section, option_name)
-	value = weechat.config_string(option)
+
+	# Automatically choose the correct weechat.config_* function and call it.
+	value = getattr(weechat, "config_"+WHITELIST_CONFIG[section_name][option_name]['type'])(option)
 
 	return value
 
@@ -142,27 +174,42 @@ def whitelist_completion_sections(userdata, completion_item, buffer, completion)
 		weechat.hook_completion_list_add(completion, section, 0, weechat.WEECHAT_LIST_POS_SORT)
 	return weechat.WEECHAT_RC_OK
 
-def whitelist_check(server, nick, host):
-	return False
+def whitelist_check(server, details):
+	nick = details['nick']
+	host = details['host']
+
+	if server in whitelist_config_get_value('whitelists', 'networks'):
+		return False
+
+	# Place a notification in the status window
+	if whitelist_config_get_value('general', 'notification'):
+		weechat.prnt("", "[{}] {} [{}] attempted to send you a private message.".format(server, nick, host))
+
+	# Log the message
+	if whitelist_config_get_value('general', 'logging'):
+		with open(weechat_dir+"/whitelist.log", 'a') as f:
+			f.write("{}: [{}] {} [{}]: {}\n".format(time.asctime(), server, nick, host, details['message']))
+
+	# Block it
+	return True
 
 def whitelist_privmsg_modifier_cb(userdata, modifier, server, raw_irc_msg):
 	details = parse_message(server, raw_irc_msg)
 
 	# Only operate on private messages.
 	if details['channel'].startswith('#'):
-		weechat.prnt("", "Returning raw channel message.")
 		return raw_irc_msg
 	else:
-		weechat.prnt("", "Processing private message")
-		block = whitelist_check(server, details['nick'], details['host'])
+		block = whitelist_check(server, details)
 		if block:
 			return ""
+
 		return raw_irc_msg
 
 def whitelist_list():
-	for type in WHITELIST_CONFIG['whitelists']:
-		value = whitelist_config_get_value('whitelists', type)
-		weechat.prnt("", "{}: {}".format(type, value))
+	for section in WHITELIST_CONFIG['whitelists']:
+		value = whitelist_config_get_value('whitelists', section)
+		weechat.prnt("", "{}: {}".format(section, value))
 
 def whitelist_add(type, arg):
 	pass
@@ -181,7 +228,8 @@ if __name__ == '__main__':
 	if weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE, SCRIPT_DESC, "", ""):
 		config_file = whitelist_config_init()
 		whitelist_config_read(config_file)
-		version = weechat.info_get("version_number", "") or 0
+		weechat_version = weechat.info_get("version_number", "") or 0
+		weechat_dir = weechat.info_get("weechat_dir", "")
 		weechat.hook_modifier("irc_in_privmsg", "whitelist_privmsg_modifier_cb", "")
 		weechat.hook_command(SCRIPT_COMMAND, "Manage the whitelist",
 			# OPTION ARGUMENTS
