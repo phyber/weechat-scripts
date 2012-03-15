@@ -84,7 +84,6 @@ def parse_message(server, signal_data):
 
 	return details
 
-
 def whitelist_config_init():
 	config_file = weechat.config_new("whitelist", "whitelist_config_reload_cb", "")
 	if not config_file:
@@ -138,6 +137,11 @@ def whitelist_config_get_value(section_name, option_name):
 
 	return value
 
+def whitelist_completion_sections(userdata, completion_item, buffer, completion):
+	for section in WHITELIST_CONFIG['whitelists']:
+		weechat.hook_completion_list_add(completion, section, 0, weechat.WEECHAT_LIST_POS_SORT)
+	return weechat.WEECHAT_RC_OK
+
 def whitelist_check(server, nick, host):
 	return False
 
@@ -179,4 +183,28 @@ if __name__ == '__main__':
 		whitelist_config_read(config_file)
 		version = weechat.info_get("version_number", "") or 0
 		weechat.hook_modifier("irc_in_privmsg", "whitelist_privmsg_modifier_cb", "")
-		weechat.hook_command(SCRIPT_COMMAND, "Manage the whitelist", "ARGS", "ARGS DESC", "", "whitelist_cmd", "")
+		weechat.hook_command(SCRIPT_COMMAND, "Manage the whitelist",
+			# OPTION ARGUMENTS
+			"list"
+			" || add <type> <arg>"
+			" || del <type> <arg>",
+			# ARGUMENT DESCRIPTIONS
+			"      list: lists whitelists and their contents\n"
+			"       add: add an entry to a given whitelist\n"
+			"       del: delete an entry from a given whitelist\n"
+			"\n"
+			"Examples:\n"
+			"  Add entries to whitelist:\n"
+			"    /whitelist add network Freenode\n"
+			"    /whitelist add host *!buddy@*.isp.com\n"
+			"  Delete entries from whitelist:\n"
+			"    /whitelist del nick Someguy\n"
+			"    /whitelist del channel #weechat\n",
+			# COMPLETIONS
+			"list %(whitelist_args)"
+			" || add %(whitelist_args)"
+			" || del %(whitelist_args)",
+			# COMMAND TO CALL + USERDATA
+			"whitelist_cmd", ""
+		)
+		weechat.hook_completion("whitelist_args", "list of whitelist arguments", "whitelist_completion_sections", "")
