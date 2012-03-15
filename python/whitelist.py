@@ -189,6 +189,14 @@ def whitelist_config_get_value(section_name, option_name):
 
 	return value
 
+def whitelist_infolist_get_value(infolist_name, server, element, type):
+	infolist = weechat.infolist_get(infolist_name, "", server)
+	weechat.infolist_next(infolist)
+	value = getattr(weechat, "infolist_"+type)(infolist, element)
+	weechat.infolist_free(infolist)
+
+	return value
+
 def whitelist_completion_sections(userdata, completion_item, buffer, completion):
 	for section in WHITELIST_CONFIG['whitelists']:
 		weechat.hook_completion_list_add(completion, section, 0, weechat.WEECHAT_LIST_POS_SORT)
@@ -198,7 +206,12 @@ def whitelist_check(server, details):
 	nick = details['nick']
 	host = details['host']
 
+	current_addr = whitelist_infolist_get_value("irc_server", server, "current_address", "string")
+	#print("WOOO: "+weechat.infolist_string(weechat.infolist_get("irc_server", "", server), "current_address"))
 	if server in whitelist_config_get_value('whitelists', 'networks'):
+		return False
+
+	if current_addr in whitelist_config_get_value('whitelists', 'networks'):
 		return False
 
 	# Split up the hosts and filter them for empty strings.
