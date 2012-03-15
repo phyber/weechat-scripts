@@ -93,6 +93,26 @@ except:
 import re
 import time
 
+# Host to RegEx mappings
+HTR = {}
+for i in range(256):
+	ch = chr(i)
+	HTR[ch] = "{}".format(ch)
+HTR['?'] = '.'
+HTR['*'] = '.*'
+
+
+def htr_replace(match):
+	return HTR[match.group(0)]
+
+def host_to_lower(host):
+	(ident, hostname) = host.split("@", 1)
+	return "{}@{}".format(ident, hostname.lower())
+
+def host_to_regex(host):
+	host = host_to_lower(host)
+	return re.sub('(.)', htr_replace, host)
+
 def parse_message(server, signal_data):
 	details = {}
 	if int(weechat_version) >= 0x00030400:
@@ -180,6 +200,11 @@ def whitelist_check(server, details):
 
 	if server in whitelist_config_get_value('whitelists', 'networks'):
 		return False
+
+	# Split up the hosts and filter them for empty strings.
+	for whitelisted_host in filter(None, whitelist_config_get_value('whitelists', 'hosts').split(" ")):
+		if re.match(host_to_regex(whitelisted_host), host):
+			return False
 
 	# Place a notification in the status window
 	if whitelist_config_get_value('general', 'notification'):
