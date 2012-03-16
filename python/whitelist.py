@@ -31,6 +31,18 @@ WHITELIST_CONFIG = {
 			"change_cb":		"",
 			"delete_cb":		"",
 		},
+		'network_channel_only': {
+			"type":			"boolean",
+			"desc":			"Only allow messages from a person if they're in a channel with you on the whitelisted network",
+			"min":			0,
+			"max":			0,
+			"string_values":	"",
+			"default":		"on",
+			"value":		"on",
+			"check_cb":		"",
+			"change_cb":		"",
+			"delete_cb":		"",
+		},
 	},
 	"whitelists": {
 		'channels': {
@@ -197,6 +209,28 @@ def whitelist_infolist_get_value(infolist_name, server, element, type):
 
 	return value
 
+def whitelist_get_channels(server):
+	infolist = weechat.infolist_get("irc_channel", "", server)
+	channels = []
+	while weechat.infolist_next(infolist):
+		channel = weechat.infolist_string(infolist, "name")
+		channels.append(channel)
+	
+	weechat.infolist_free(infolist)
+
+	return channels
+
+def whitelist_get_channel_nicks(server, channel):
+	infolist = weechat.infolist_get("irc_nick", "", "{},{}".format(server, channel))
+	nicks = []
+	while weechat.infolist_next(infolist):
+		nick = weechat.infolist_string(infolist, "name")
+		nicks.append(nick)
+	
+	weechat.infolist_free(infolist)
+
+	return nicks
+
 def whitelist_completion_sections(userdata, completion_item, buffer, completion):
 	for section in WHITELIST_CONFIG['whitelists']:
 		weechat.hook_completion_list_add(completion, section, 0, weechat.WEECHAT_LIST_POS_SORT)
@@ -207,12 +241,21 @@ def whitelist_check(server, details):
 	host = details['host']
 
 	current_addr = whitelist_infolist_get_value("irc_server", server, "current_address", "string")
-	#print("WOOO: "+weechat.infolist_string(weechat.infolist_get("irc_server", "", server), "current_address"))
-	if server in whitelist_config_get_value('whitelists', 'networks'):
-		return False
+	whitelist_networks = filter(None, whitelist_config_get_value('whitelists', 'networks').split(" "))
+	whitelist_networks.append(current_addr)
 
-	if current_addr in whitelist_config_get_value('whitelists', 'networks'):
-		return False
+	# First check if we have whitelisted things on this network.
+	if server in whitelist_networks:
+		# If we're only accepting messages from people in our channels...
+		if whitelist_config_get_value('general', 'network_channel_only'):
+			# Get a list of channels
+			for channel in whitelist_get_channels(server):
+				# And check if they're in it.
+				if nick in whitelist_get_channel_nicks(server, channel):
+					return False
+		else:
+			# Otherwise just accept the message.
+			return False
 
 	# Split up the hosts and filter them for empty strings.
 	for whitelisted_host in filter(None, whitelist_config_get_value('whitelists', 'hosts').split(" ")):
