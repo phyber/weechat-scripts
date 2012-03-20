@@ -242,9 +242,9 @@ def whitelist_check(server, details):
 
 	current_addr = whitelist_infolist_get_value("irc_server", server, "current_address", "string")
 	whitelist_networks = filter(None, whitelist_config_get_value('whitelists', 'networks').split(" "))
-	whitelist_networks.append(current_addr)
+	#whitelist_networks.append(current_addr)
 
-	# First check if we have whitelisted things on this network.
+	# FIRST: Check if we have whitelisted things on this network.
 	if server in whitelist_networks:
 		# If we're only accepting messages from people in our channels...
 		if whitelist_config_get_value('general', 'network_channel_only'):
@@ -252,14 +252,37 @@ def whitelist_check(server, details):
 			for channel in whitelist_get_channels(server):
 				# And check if they're in it.
 				if nick in whitelist_get_channel_nicks(server, channel):
+					# Accept it if they are.
 					return False
 		else:
 			# Otherwise just accept the message.
 			return False
 
+	# SECOND: Check the nicks.
+	for whitenick_entry in filter(None, whitelist_config_get_value('whitelists', 'nicks').split(" ")):
+		# 1. Simple check, is the nick itself whitelisted.
+		if whitenick_entry == nick:
+			return False
+		# 2. Is the nick localised to the current server
+		if whitenick_entry == "{}@{}".format(nick, server):
+			return False
+		# 3. Last try, is it localised to the current server addr?
+		if whitenick_entry == "{}@{}".format(nick, current_addr):
+			return False
+
+	# THIRD: Check the hosts.
 	# Split up the hosts and filter them for empty strings.
 	for whitelisted_host in filter(None, whitelist_config_get_value('whitelists', 'hosts').split(" ")):
+		# 1. Check if the whitelisted host matches.
 		if re.match(host_to_regex(whitelisted_host), host):
+			return False
+
+	# FOURTH: Check the channels.
+	# Check each whitelisted channel to see if the nick is in one of those channels
+	for whitelisted_channel in filter(None, whitelist_config_get_value('whitelists', 'channels').split(" ")):
+		channel_nicks = whitelist_get_channel_nicks(server, whitelisted_channel)
+		# 1. Check if the nick is in the channel.
+		if nick in channel_nicks:
 			return False
 
 	# Place a notification in the status window
