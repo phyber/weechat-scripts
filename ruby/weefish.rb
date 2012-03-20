@@ -148,6 +148,17 @@ def in_privmsg data, signal, server, args
       end
     end
   end
+  # Decrypt encrypted actions
+  if args =~ /^(:(.*?)!.*? PRIVMSG (.*?) :)\001ACTION (\+OK|mcps) (.*)\001$/
+	  selector = $3 == Weechat.info_get("irc_nick", server) ? $2 : $3
+	  key = Weechat.config_string Weechat.config_get("plugins.var.ruby.weefish.key.#{server}.#{selector}")
+	  unless key.empty?
+		  fish = IRC::FiSH.new key
+		  if decrypted = fish.decrypt($5)
+			  return $1+"\001ACTION #{decrypted}\001"
+		  end
+	  end
+  end
   return args
 end
 
