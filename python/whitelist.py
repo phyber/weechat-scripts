@@ -301,14 +301,14 @@ def whitelist_privmsg_modifier_cb(userdata, modifier, server, raw_irc_msg):
 	details = parse_message(server, raw_irc_msg)
 
 	# Only operate on private messages.
-	if details['channel'].startswith('#'):
-		return raw_irc_msg
-	else:
+	if not details['channel'].startswith('#'):
 		block = whitelist_check(server, details)
 		if block:
 			return ""
 
-		return raw_irc_msg
+	# Return the unmodified raw message if we're not blocking
+	# or it's not a private message.
+	return raw_irc_msg
 
 def whitelist_list():
 	for section in SCRIPT_CONFIG['whitelists']:
