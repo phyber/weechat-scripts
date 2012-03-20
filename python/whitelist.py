@@ -5,7 +5,7 @@ SCRIPT_LICENSE	= "GPL3"
 SCRIPT_DESC	= "Block private messages from people not on your whitelist."
 SCRIPT_COMMAND	= SCRIPT_NAME
 
-WHITELIST_CONFIG = {
+SCRIPT_CONFIG = {
 	"general": {
 		'notification': {
 			"type":			"boolean",
@@ -153,7 +153,7 @@ def whitelist_config_init():
 	if not config_file:
 		return
 
-	for section in WHITELIST_CONFIG:
+	for section in SCRIPT_CONFIG:
 		config_section = weechat.config_new_section(
 			config_file,
 			section,
@@ -162,7 +162,7 @@ def whitelist_config_init():
 		if not config_section:
 			weechat.config_free(config_file)
 			return
-		for option_name, props in WHITELIST_CONFIG[section].items():
+		for option_name, props in SCRIPT_CONFIG[section].items():
 			weechat.config_new_option(
 				config_file,
 				config_section,
@@ -197,7 +197,7 @@ def whitelist_config_get_value(section_name, option_name):
 	option = weechat.config_search_option(config_file, section, option_name)
 
 	# Automatically choose the correct weechat.config_* function and call it.
-	value = getattr(weechat, "config_"+WHITELIST_CONFIG[section_name][option_name]['type'])(option)
+	value = getattr(weechat, "config_"+SCRIPT_CONFIG[section_name][option_name]['type'])(option)
 
 	return value
 
@@ -232,7 +232,7 @@ def whitelist_get_channel_nicks(server, channel):
 	return nicks
 
 def whitelist_completion_sections(userdata, completion_item, buffer, completion):
-	for section in WHITELIST_CONFIG['whitelists']:
+	for section in SCRIPT_CONFIG['whitelists']:
 		weechat.hook_completion_list_add(completion, section, 0, weechat.WEECHAT_LIST_POS_SORT)
 	return weechat.WEECHAT_RC_OK
 
@@ -311,7 +311,7 @@ def whitelist_privmsg_modifier_cb(userdata, modifier, server, raw_irc_msg):
 		return raw_irc_msg
 
 def whitelist_list():
-	for section in WHITELIST_CONFIG['whitelists']:
+	for section in SCRIPT_CONFIG['whitelists']:
 		value = whitelist_config_get_value('whitelists', section)
 		weechat.prnt("", "{}: {}".format(section, value))
 
