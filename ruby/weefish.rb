@@ -163,6 +163,17 @@ def in_privmsg data, signal, server, args
 end
 
 def out_privmsg data, signal, server, args
+  # We have to check for actions first
+  if args =~ /^(PRIVMSG (.*?) :)\001ACTION (.*)\001$/
+	  key = Weechat.config_string Weechat.config_get("plugins.var.ruby.weefish.key.#{server}.#{$2}")
+	  unless key.empty?
+		  fish = IRC::FiSH.new key
+		  return "#{$1}\001ACTION +OK #{fish.encrypt $3}\001"
+	  else
+		  return args
+	  end
+  end
+  # If it's anything else just encrypt the whole thing
   if args =~ /^(PRIVMSG (.*?) :)(.*)$/
     key = Weechat.config_string Weechat.config_get("plugins.var.ruby.weefish.key.#{server}.#{$2}")
     
