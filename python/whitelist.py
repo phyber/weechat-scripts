@@ -146,12 +146,18 @@ def parse_message(server, signal_data):
 	# WeeChat leaves this important part to us. Get the actual message.
 	details['message'] = details['arguments'].split(" :", 1)[1]
 
+	# If the message starts and ends with \001, it's a CTCP
+	if details['message'].startswith('\001') and details['message'].endswith('\001'):
+		details['ctcp'] = True
+	else:
+		details['ctcp'] = False
+
 	return details
 
 def whitelist_config_init():
 	config_file = weechat.config_new("whitelist", "whitelist_config_reload_cb", "")
 	if not config_file:
-		return
+		return None
 
 	for section in SCRIPT_CONFIG:
 		config_section = weechat.config_new_section(
@@ -161,7 +167,7 @@ def whitelist_config_init():
 		)
 		if not config_section:
 			weechat.config_free(config_file)
-			return
+			return None
 		for option_name, props in SCRIPT_CONFIG[section].items():
 			weechat.config_new_option(
 				config_file,
@@ -190,6 +196,10 @@ def whitelist_config_write(config_file):
 
 def whitelist_config_reload_cb(userdata, config_file):
 	return weechat.WEECHAT_CONFIG_READ_OK
+
+def whitelist_config_change_cb(userdata, option):
+	option = list(set(filter(None, option.split(" "))))
+	return option
 
 def whitelist_config_get_value(section_name, option_name):
 	# This is a lot of work to just get the value of an option.
@@ -301,10 +311,11 @@ def whitelist_privmsg_modifier_cb(userdata, modifier, server, raw_irc_msg):
 	details = parse_message(server, raw_irc_msg)
 
 	# Only operate on private messages.
-	if not details['channel'].startswith('#'):
-		block = whitelist_check(server, details)
-		if block:
-			return ""
+	if not details['ctcp']:
+		if not details['channel'].startswith('#'):
+			block = whitelist_check(server, details)
+			if block:
+				return ""
 
 	# Return the unmodified raw message if we're not blocking
 	# or it's not a private message.
