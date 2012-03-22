@@ -113,17 +113,13 @@ for i in range(256):
 HTR['?'] = '.'
 HTR['*'] = '.*'
 
-
-def htr_replace(match):
-	return HTR[match.group(0)]
-
 def host_to_lower(host):
 	(ident, hostname) = host.split("@", 1)
 	return "{}@{}".format(ident, hostname.lower())
 
 def host_to_regex(host):
 	host = host_to_lower(host)
-	return re.sub('(.)', htr_replace, host)
+	return re.sub('(.)', lambda match: HTR[match.group(0)], host)
 
 def parse_message(server, signal_data):
 	details = {}
@@ -342,7 +338,8 @@ def whitelist_cmd(userdata, buffer, arg):
 if __name__ == '__main__':
 	if weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE, SCRIPT_DESC, "", ""):
 		config_file = whitelist_config_init()
-		whitelist_config_read(config_file)
+		if config_file:
+			whitelist_config_read(config_file)
 		weechat_version = weechat.info_get("version_number", "") or 0
 		weechat_dir = weechat.info_get("weechat_dir", "")
 		weechat.hook_modifier("irc_in_privmsg", "whitelist_privmsg_modifier_cb", "")
