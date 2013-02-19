@@ -115,14 +115,15 @@ HTR['*'] = '.*'
 
 def host_to_lower(host):
 	(ident, hostname) = host.split("@", 1)
-	return "{}@{}".format(ident, hostname.lower())
+	return "{ident}@{hostname}".format(
+			ident=ident,
+			hostname=hostname.lower())
 
 def host_to_regex(host):
 	host = host_to_lower(host)
 	return re.sub('(.)', lambda match: HTR[match.group(0)], host)
 
 def parse_message(server, signal_data):
-	details = {}
 	if int(weechat_version) >= 0x00030400:
 		# Newer (>=0.3.4) versions of WeeChat can prepare a hash with most of
 		# what we want.
@@ -133,7 +134,10 @@ def parse_message(server, signal_data):
 	else:
 		# WeeChat <0.3.4 we have to construct it ourselves.
 		(source, command, channel, message) = signal_data.split(" ", 3)
-		details['arguments'] = "{} {}".format(channel, message)
+		details = {}
+		details['arguments'] = "{channel} {message}".format(
+				channel=channel,
+				message=message)
 		details['channel'] = channel
 		details['command'] = command
 		details['host'] = source.lstrip(":")
@@ -203,14 +207,20 @@ def whitelist_config_get_value(section_name, option_name):
 	option = weechat.config_search_option(config_file, section, option_name)
 
 	# Automatically choose the correct weechat.config_* function and call it.
-	value = getattr(weechat, "config_"+SCRIPT_CONFIG[section_name][option_name]['type'])(option)
+	config_function = "config_{type}".format(
+			type=SCRIPT_CONFIG[section_name][option_name]['type']
+			)
+	value = getattr(weechat, config_function)(option)
 
 	return value
 
 def whitelist_infolist_get_value(infolist_name, server, element, type):
 	infolist = weechat.infolist_get(infolist_name, "", server)
 	weechat.infolist_next(infolist)
-	value = getattr(weechat, "infolist_"+type)(infolist, element)
+	infolist_function = "infolist_{type}".format(
+			type=type
+			)
+	value = getattr(weechat, infolist_function)(infolist, element)
 	weechat.infolist_free(infolist)
 
 	return value
@@ -218,6 +228,7 @@ def whitelist_infolist_get_value(infolist_name, server, element, type):
 def whitelist_get_channels(server):
 	infolist = weechat.infolist_get("irc_channel", "", server)
 	channels = []
+
 	while weechat.infolist_next(infolist):
 		channel = weechat.infolist_string(infolist, "name")
 		channels.append(channel)
@@ -227,7 +238,9 @@ def whitelist_get_channels(server):
 	return channels
 
 def whitelist_get_channel_nicks(server, channel):
-	infolist = weechat.infolist_get("irc_nick", "", "{},{}".format(server, channel))
+	infolist = weechat.infolist_get("irc_nick", "", "{server},{channel}".format(
+		server=server,
+		channel=channel))
 	nicks = []
 	while weechat.infolist_next(infolist):
 		nick = weechat.infolist_string(infolist, "name")
@@ -270,10 +283,10 @@ def whitelist_check(server, details):
 		if whitenick_entry == nick:
 			return False
 		# 2. Is the nick localised to the current server
-		if whitenick_entry == "{}@{}".format(nick, server):
+		if whitenick_entry == "{nick}@{server}".format(nick=nick, server=server):
 			return False
 		# 3. Last try, is it localised to the current server addr?
-		if whitenick_entry == "{}@{}".format(nick, current_addr):
+		if whitenick_entry == "{nick}@{addr}".format(nick=nick, addr=current_addr):
 			return False
 
 	# THIRD: Check the hosts.
@@ -293,12 +306,20 @@ def whitelist_check(server, details):
 
 	# Place a notification in the status window
 	if whitelist_config_get_value('general', 'notification'):
-		weechat.prnt("", "[{}] {} [{}] attempted to send you a private message.".format(server, nick, host))
+		weechat.prnt("", "[{server}] {nick} [{host}] attempted to send you a private message.".format(
+			server=server,
+			nick=nick,
+			host=host))
 
 	# Log the message
 	if whitelist_config_get_value('general', 'logging'):
 		with open(weechat_dir+"/whitelist.log", 'a') as f:
-			f.write("{}: [{}] {} [{}]: {}\n".format(time.asctime(), server, nick, host, details['message']))
+			f.write("{time}: [{server}] {nick} [{host}]: {message}\n".format(
+				time=time.asctime(),
+				server=server,
+				nick=nick,
+				host=host,
+				message=details['message']))
 
 	# Block it
 	return True
@@ -320,7 +341,9 @@ def whitelist_privmsg_modifier_cb(userdata, modifier, server, raw_irc_msg):
 def whitelist_list():
 	for section in SCRIPT_CONFIG['whitelists']:
 		value = whitelist_config_get_value('whitelists', section)
-		weechat.prnt("", "{}: {}".format(section, value))
+		weechat.prnt("", "{section}: {value}".format(
+			section=section,
+			value=value))
 
 def whitelist_add(type, arg):
 	pass
