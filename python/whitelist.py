@@ -17,6 +17,7 @@ SCRIPT_CONFIG = {
 			"value":		"on",
 			"check_cb":		"",
 			"change_cb":		"",
+			"change_data":		"",
 			"delete_cb":		"",
 		},
 		'logging': {
@@ -29,6 +30,7 @@ SCRIPT_CONFIG = {
 			"value":		"on",
 			"check_cb":		"",
 			"change_cb":		"",
+			"change_data":		"",
 			"delete_cb":		"",
 		},
 		'network_channel_only': {
@@ -41,6 +43,7 @@ SCRIPT_CONFIG = {
 			"value":		"on",
 			"check_cb":		"",
 			"change_cb":		"",
+			"change_data":		"",
 			"delete_cb":		"",
 		},
 	},
@@ -54,7 +57,8 @@ SCRIPT_CONFIG = {
 			"default":		"",
 			"value":		"",
 			"check_cb":		"",
-			"change_cb":		"",
+			"change_cb":		"whitelist_config_changed_cb",
+			"change_data":		"channels",
 			"delete_cb":		"",
 		},
 		'hosts': {
@@ -66,7 +70,8 @@ SCRIPT_CONFIG = {
 			"default":		"",
 			"value":		"",
 			"check_cb":		"",
-			"change_cb":		"",
+			"change_cb":		"whitelist_config_changed_db",
+			"change_data":		"hosts",
 			"delete_cb":		"",
 		},
 		'networks': {
@@ -78,7 +83,8 @@ SCRIPT_CONFIG = {
 			"default":		"",
 			"value":		"",
 			"check_cb":		"",
-			"change_cb":		"",
+			"change_cb":		"whitelist_config_changed_db",
+			"change_data":		"networks",
 			"delete_cb":		"",
 		},
 		'nicks': {
@@ -90,7 +96,8 @@ SCRIPT_CONFIG = {
 			"default":		"",
 			"value":		"",
 			"check_cb":		"",
-			"change_cb":		"",
+			"change_cb":		"whitelist_config_changed_cb",
+			"change_data":		"nicks",
 			"delete_cb":		"",
 		},
 	},
@@ -182,7 +189,7 @@ def whitelist_config_init():
 				props['default'],
 				0,
 				props['check_cb'], "",
-				props['change_cb'], "",
+				props['change_cb'], props['change_data'],
 				props['delete_cb'], ""
 			)
 
@@ -213,6 +220,21 @@ def whitelist_config_get_value(section_name, option_name):
 	value = getattr(weechat, config_function)(option)
 
 	return value
+
+def whitelist_config_set_value(section_name, option_name, value):
+	# Sets a configuration option
+	section = weechat.config_search_section(config_file, section_name)
+	option = weechat.config_search_option(config_file, section, option_name)
+
+	rc = weechat.config_option_set(option, value, 1)
+	return rc
+
+def whitelist_config_changed_cb(data, option):
+	section = weechat.config_search_section(config_file, data)
+	weechat.prnt("", "Whitelisted {type} now: {values}".format(
+		type=data,
+		values=whitelist_config_get_value('whitelists', 'nicks')))
+	return weechat.WEECHAT_RC_OK
 
 def whitelist_infolist_get_value(infolist_name, server, element, type):
 	infolist = weechat.infolist_get(infolist_name, "", server)
@@ -346,15 +368,54 @@ def whitelist_list():
 			value=value))
 
 def whitelist_add(type, arg):
-	pass
+	# Create a list from the current setting
+	values = whitelist_config_get_value('whitelists', type).split()
+	# Add the new value to the list.
+	values.append(arg)
+	# Set the new option value. We use a set here to ensure uniqueness and
+	# we sort it just so that output is nicer.
+	whitelist_config_set_value('whitelists', type, " ".join(sorted(set(values))))
 
 def whitelist_del(type, arg):
-	pass
+	values = whitelist_config_get_value('whitelists', type).split()
+	try:
+		values.remove(arg)
+		whitelist_config_set_value('whitelists', type, " ".join(values))
+	except:
+		weechat.prnt("", "Whitelist error. '{arg}' not found in '{type}'.".format(
+			arg=arg,
+			type=type))
 
-def whitelist_cmd(userdata, buffer, arg):
-	if arg in ('', 'list'):
+def whitelist_cmd_split(count, args, default=None):
+	# Hilarious.
+	args = args.split()
+	while len(args) < count:
+		args.append(default)
+	# Just return the first three args.
+	return args[:3]
+
+def whitelist_cmd(userdata, buffer, args):
+	(cmd, type, arg) = whitelist_cmd_split(3, args)
+
+	if cmd in (None, '', 'list'):
 		whitelist_list()
-	
+		return weechat.WEECHAT_RC_OK
+
+	valid_types = set(k for k in SCRIPT_CONFIG['whitelists'].keys())
+	if type in valid_types:
+		if arg is not None:
+			if cmd == 'add':
+				whitelist_add(type, arg)
+
+			if cmd == 'del':
+				whitelist_del(type, arg)
+		else:
+			weechat.prnt("", "Error. Must supply an argument to '{type}'.".format(
+				type=type))
+	else:
+		weechat.prnt("", "Error. Valid whitelist types are: {types}.".format(
+			types=", ".join(valid_types)))
+
 	#weechat.prnt("", "UD: '{}' / BUF: '{}' / ARGS: '{}'".format(userdata, weechat.buffer_get_string(buffer, "name"), arg))
 	return weechat.WEECHAT_RC_OK
 
