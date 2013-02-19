@@ -57,7 +57,7 @@ SCRIPT_CONFIG = {
 			"default":		"",
 			"value":		"",
 			"check_cb":		"",
-			"change_cb":		"whitelist_config_changed_cb",
+			"change_cb":		"whitelist_config_option_change_cb",
 			"change_data":		"channels",
 			"delete_cb":		"",
 		},
@@ -70,7 +70,7 @@ SCRIPT_CONFIG = {
 			"default":		"",
 			"value":		"",
 			"check_cb":		"",
-			"change_cb":		"whitelist_config_changed_db",
+			"change_cb":		"whitelist_config_option_change_cb",
 			"change_data":		"hosts",
 			"delete_cb":		"",
 		},
@@ -83,7 +83,7 @@ SCRIPT_CONFIG = {
 			"default":		"",
 			"value":		"",
 			"check_cb":		"",
-			"change_cb":		"whitelist_config_changed_db",
+			"change_cb":		"whitelist_config_option_change_cb",
 			"change_data":		"networks",
 			"delete_cb":		"",
 		},
@@ -96,7 +96,7 @@ SCRIPT_CONFIG = {
 			"default":		"",
 			"value":		"",
 			"check_cb":		"",
-			"change_cb":		"whitelist_config_changed_cb",
+			"change_cb":		"whitelist_config_option_change_cb",
 			"change_data":		"nicks",
 			"delete_cb":		"",
 		},
@@ -204,9 +204,12 @@ def whitelist_config_write(config_file):
 def whitelist_config_reload_cb(userdata, config_file):
 	return weechat.WEECHAT_CONFIG_READ_OK
 
-def whitelist_config_change_cb(userdata, option):
-	option = list(set(filter(None, option.split(" "))))
-	return option
+def whitelist_config_option_change_cb(userdata, option):
+	section = weechat.config_search_section(config_file, userdata)
+	weechat.prnt("", "Whitelisted {type} now: {values}".format(
+		type=userdata,
+		values=whitelist_config_get_value('whitelists', userdata)))
+	return weechat.WEECHAT_RC_OK
 
 def whitelist_config_get_value(section_name, option_name):
 	# This is a lot of work to just get the value of an option.
@@ -229,12 +232,6 @@ def whitelist_config_set_value(section_name, option_name, value):
 	rc = weechat.config_option_set(option, value, 1)
 	return rc
 
-def whitelist_config_changed_cb(data, option):
-	section = weechat.config_search_section(config_file, data)
-	weechat.prnt("", "Whitelisted {type} now: {values}".format(
-		type=data,
-		values=whitelist_config_get_value('whitelists', 'nicks')))
-	return weechat.WEECHAT_RC_OK
 
 def whitelist_infolist_get_value(infolist_name, server, element, type):
 	infolist = weechat.infolist_get(infolist_name, "", server)
@@ -335,7 +332,9 @@ def whitelist_check(server, details):
 
 	# Log the message
 	if whitelist_config_get_value('general', 'logging'):
-		with open(weechat_dir+"/whitelist.log", 'a') as f:
+		whitelist_log_file = "{weechat_dir}/whitelist.log".format(
+				weechat_dir=weechat_dir))
+		with open(whitelist_log_file, 'a') as f:
 			f.write("{time}: [{server}] {nick} [{host}]: {message}\n".format(
 				time=time.asctime(),
 				server=server,
@@ -401,8 +400,7 @@ def whitelist_cmd(userdata, buffer, args):
 		whitelist_list()
 		return weechat.WEECHAT_RC_OK
 
-	valid_types = set(k for k in SCRIPT_CONFIG['whitelists'].keys())
-	if type in valid_types:
+	if type in valid_option_types:
 		if arg is not None:
 			if cmd == 'add':
 				whitelist_add(type, arg)
@@ -414,7 +412,7 @@ def whitelist_cmd(userdata, buffer, args):
 				type=type))
 	else:
 		weechat.prnt("", "Error. Valid whitelist types are: {types}.".format(
-			types=", ".join(valid_types)))
+			types=", ".join(valid_option_types)))
 
 	#weechat.prnt("", "UD: '{}' / BUF: '{}' / ARGS: '{}'".format(userdata, weechat.buffer_get_string(buffer, "name"), arg))
 	return weechat.WEECHAT_RC_OK
@@ -424,6 +422,7 @@ if __name__ == '__main__':
 		config_file = whitelist_config_init()
 		if config_file:
 			whitelist_config_read(config_file)
+		valid_option_types = set(k for k in SCRIPT_CONFIG['whitelists'].keys())
 		weechat_version = weechat.info_get("version_number", "") or 0
 		weechat_dir = weechat.info_get("weechat_dir", "")
 		weechat.hook_modifier("irc_in_privmsg", "whitelist_privmsg_modifier_cb", "")
