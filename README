@@ -1,7 +1,15 @@
-Python
-------
-message_parse.py: Small example of parsing a PRIVMSG
-
 Lua
 ---
-loadavg.lua: Bar item for displaying current load averages.
+
+ * `loadavg.lua`: Bar item for displaying current load averages.
+
+Python
+------
+
+ * `message_parse.py`: Small example of parsing a PRIVMSG
+ * `whitelist.py`: Block private messages from users not on your whitelist.
+
+Ruby
+----
+
+ * `weefish.rb`: Small modifications to the weefish.rb script.
