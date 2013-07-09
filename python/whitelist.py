@@ -113,10 +113,7 @@ import re
 import time
 
 # Host to RegEx mappings
-HTR = {}
-for i in range(256):
-	ch = chr(i)
-	HTR[ch] = "{}".format(ch)
+HTR = {x:x for x in (chr(x) for x in xrange(256))}
 HTR['?'] = '.'
 HTR['*'] = '.*'
 
