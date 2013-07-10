@@ -1,10 +1,8 @@
 Lua
 ===
 
-Original
---------
-
- * `loadavg.lua`: Bar item for displaying current load averages.
+ * Original
+  * `loadavg.lua`: Bar item for displaying current load averages.
 
 Python
 ======
@@ -13,15 +11,11 @@ Python
   * `message_parse.py`: Small example of parsing a PRIVMSG
   * `whitelist.py`: Block private messages from users not on your whitelist.
 
-Modified
---------
-
- * `title.py`: Modifications to make `title.py` behave more like the Irssi equvalent.
+ * Modified
+  * `title.py`: Modifications to make `title.py` behave more like the Irssi equvalent.
 
 Ruby
 ====
 
-Modified
---------
-
- * `weefish.rb`: Small modifications to the weefish.rb script.
+ * Modified
+  * `weefish.rb`: Small modifications to the weefish.rb script.
