@@ -9,11 +9,9 @@ Original
 Python
 ======
 
-Original
---------
-
- * `message_parse.py`: Small example of parsing a PRIVMSG
- * `whitelist.py`: Block private messages from users not on your whitelist.
+ * Originals
+  * `message_parse.py`: Small example of parsing a PRIVMSG
+  * `whitelist.py`: Block private messages from users not on your whitelist.
 
 Modified
 --------
