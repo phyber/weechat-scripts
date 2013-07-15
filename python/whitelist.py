@@ -287,18 +287,18 @@ class infolist_generator(object):
 		else:
 			raise StopIteration
 
-def whitelist_infolist_get_value(infolist_name, server, element, type):
-	infolist = weechat.infolist_get(infolist_name, "", server)
-	weechat.infolist_next(infolist)
-	infolist_function = "infolist_{type}".format(
-			type=type
-			)
-	value = getattr(weechat, infolist_function)(infolist, element)
-	weechat.infolist_free(infolist)
-
-	return value
+def whitelist_infolist_get_value(infolist_name, server, element):
+	"""
+	Return the first instance of element from the infolist
+	"""
+	with infolist_generator(infolist_name, "", server) as infolist:
+		for row in infolist:
+			return row.get(element)
 
 def whitelist_get_channels(server):
+	"""
+	Get a list of channels on the given server.
+	"""
 	channels = []
 
 	with infolist_generator("irc_channel", "", server) as infolist:
@@ -307,6 +307,9 @@ def whitelist_get_channels(server):
 	return channels
 
 def whitelist_get_channel_nicks(server, channel):
+	"""
+	Get a list of nicks in the given channel on the given server
+	"""
 	nicks = []
 
 	with infolist_generator("irc_nick", "", "{server},{channel}".format(
@@ -325,7 +328,7 @@ def whitelist_check(server, details):
 	nick = details['nick']
 	host = details['host']
 
-	current_addr = whitelist_infolist_get_value("irc_server", server, "current_address", "string")
+	current_addr = whitelist_infolist_get_value("irc_server", server, "current_address")
 	whitelist_networks = filter(None, whitelist_config_get_value('whitelists', 'networks').split(" "))
 	#whitelist_networks.append(current_addr)
 
