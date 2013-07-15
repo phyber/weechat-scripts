@@ -53,6 +53,10 @@ hooks = (
         'hotlist_*',
 )
 
+expandos = {
+		'$N': current_nickname,
+
+		}
 
 def update_title(data, signal, signal_data):
     ''' The callback that adds title. '''
