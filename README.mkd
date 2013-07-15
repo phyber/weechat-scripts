@@ -8,6 +8,7 @@ Python
 ======
 
  * Originals
+  * `infolist_generator.py`: Class to make handling infolists much less hateful.
   * `message_parse.py`: Small example of parsing a PRIVMSG
   * `whitelist.py`: Block private messages from users not on your whitelist.
 
