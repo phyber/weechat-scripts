@@ -1,3 +1,12 @@
+FIELD_TYPES = {
+		# Not available to API
+		#'b': "infolist_buffer",
+		'i': "infolist_integer",
+		'p': "infolist_pointer",
+		's': "infolist_string",
+		't': "infolist_time",
+		}
+
 class infolist_generator(object):
 	def __init__(self, infolist_name, pointer, infolist_args):
 		self.infolist_name = infolist_name
