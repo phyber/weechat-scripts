@@ -1,3 +1,12 @@
+try:
+	import weechat
+except:
+	import sys
+	print("This script must be run under WeeChat")
+	sys.exit(1)
+import re
+import time
+
 SCRIPT_NAME	= "whitelist"
 SCRIPT_AUTHOR	= "phyber"
 SCRIPT_VERSION	= "1.0"
@@ -111,15 +120,6 @@ FIELD_TYPES = {
 		's': "infolist_string",
 		't': "infolist_time",
 		}
-
-try:
-	import weechat
-except:
-	import sys
-	print("This script must be run under WeeChat")
-	sys.exit(1)
-import re
-import time
 
 # Host to RegEx mappings
 HTR = {x:x for x in (chr(x) for x in xrange(256))}
