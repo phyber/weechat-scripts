@@ -127,16 +127,25 @@ HTR['?'] = '.'
 HTR['*'] = '.*'
 
 def host_to_lower(host):
+	"""
+	Convert the hostname portion of an address string to lowercase.
+	"""
 	(ident, hostname) = host.split("@", 1)
 	return "{ident}@{hostname}".format(
 			ident=ident,
 			hostname=hostname.lower())
 
 def host_to_regex(host):
+	"""
+	Convert host to a regex.
+	"""
 	host = host_to_lower(host)
 	return re.sub('(.)', lambda match: HTR[match.group(0)], host)
 
 def parse_message(server, signal_data):
+	"""
+	Return details for private messages
+	"""
 	if int(weechat_version) >= 0x00030400:
 		# Newer (>=0.3.4) versions of WeeChat can prepare a hash with most of
 		# what we want.
@@ -168,6 +177,9 @@ def parse_message(server, signal_data):
 	return details
 
 def whitelist_config_init():
+	"""
+	Initialize the whitelist configuration.
+	"""
 	config_file = weechat.config_new("whitelist", "whitelist_config_reload_cb", "")
 	if not config_file:
 		return None
@@ -202,15 +214,27 @@ def whitelist_config_init():
 	return config_file
 
 def whitelist_config_read(config_file):
+	"""
+	Read the whitelist config file.
+	"""
 	return weechat.config_read(config_file)
 
 def whitelist_config_write(config_file):
+	"""
+	Write the whitelist config file.
+	"""
 	return weechat.config_write(config_file)
 
 def whitelist_config_reload_cb(userdata, config_file):
+	"""
+	Callback after the config file has been reloaded.
+	"""
 	return weechat.WEECHAT_CONFIG_READ_OK
 
 def whitelist_config_option_change_cb(userdata, option):
+	"""
+	Callback when a config option was changed.
+	"""
 	section = weechat.config_search_section(config_file, userdata)
 	weechat.prnt("", "Whitelisted {type} now: {values}".format(
 		type=userdata,
@@ -218,6 +242,9 @@ def whitelist_config_option_change_cb(userdata, option):
 	return weechat.WEECHAT_RC_OK
 
 def whitelist_config_get_value(section_name, option_name):
+	"""
+	Return a value from the whitelist configuration.
+	"""
 	# This is a lot of work to just get the value of an option.
 	section = weechat.config_search_section(config_file, section_name)
 	option = weechat.config_search_option(config_file, section, option_name)
@@ -231,7 +258,9 @@ def whitelist_config_get_value(section_name, option_name):
 	return value
 
 def whitelist_config_set_value(section_name, option_name, value):
-	# Sets a configuration option
+	"""
+	Set a configuration option.
+	"""
 	section = weechat.config_search_section(config_file, section_name)
 	option = weechat.config_search_option(config_file, section, option_name)
 
@@ -239,6 +268,16 @@ def whitelist_config_set_value(section_name, option_name, value):
 	return rc
 
 class InfolistGenerator(object):
+	"""
+	Infolist context manager/generator for easy use of infolists.
+	Accepts the same arguments as weechat's infolist_get function.
+
+	>>> with InfolistGenerator("irc_channel", "", "server_name") as infolist:
+	>>>     channels = [row['name']
+	>>>         for row in infolist
+	>>>         if row['name'].startswith('#')]
+	"""
+
 	def __init__(self, infolist_name, pointer, infolist_args):
 		self.infolist_name = infolist_name
 		self.pointer = pointer
@@ -261,6 +300,9 @@ class InfolistGenerator(object):
 		return self
 
 	def get_fields(self):
+		"""
+		Return a dict of the fields in the current infolist position.
+		"""
 		fields = {}
 		for field in weechat.infolist_fields(self._infolist).split(","):
 			(field_type, field_name) = field.split(":")
@@ -275,7 +317,6 @@ class InfolistGenerator(object):
 		return fields
 
 	def next(self):
-		# Advance the infolist
 		if weechat.infolist_next(self._infolist):
 			fields = self.get_fields()
 			return fields
@@ -297,7 +338,9 @@ def whitelist_get_channels(server):
 	channels = []
 
 	with InfolistGenerator("irc_channel", "", server) as infolist:
-		channels = [row['name'] for row in infolist if row['name'].startswith('#')]
+		channels = [row['name']
+				for row in infolist
+				if row['name'].startswith('#')]
 
 	return channels
 
@@ -315,11 +358,17 @@ def whitelist_get_channel_nicks(server, channel):
 	return nicks
 
 def whitelist_completion_sections(userdata, completion_item, buffer, completion):
+	"""
+	Add hooks for whitelist completion.
+	"""
 	for section in SCRIPT_CONFIG['whitelists']:
 		weechat.hook_completion_list_add(completion, section, 0, weechat.WEECHAT_LIST_POS_SORT)
 	return weechat.WEECHAT_RC_OK
 
 def whitelist_check(server, details):
+	"""
+	Return a boolean indicating if the given details are whitelisted or not.
+	"""
 	nick = details['nick']
 	host = details['host']
 
@@ -391,6 +440,9 @@ def whitelist_check(server, details):
 	return True
 
 def whitelist_privmsg_modifier_cb(userdata, modifier, server, raw_irc_msg):
+	"""
+	Modifies the raw_irc_msg depending on whitelisted status.
+	"""
 	details = parse_message(server, raw_irc_msg)
 
 	# Only operate on private messages.
@@ -405,6 +457,9 @@ def whitelist_privmsg_modifier_cb(userdata, modifier, server, raw_irc_msg):
 	return raw_irc_msg
 
 def whitelist_list():
+	"""
+	Lists all whitelist details.
+	"""
 	for section in SCRIPT_CONFIG['whitelists']:
 		value = whitelist_config_get_value('whitelists', section)
 		weechat.prnt("", "{section}: {value}".format(
@@ -412,6 +467,9 @@ def whitelist_list():
 			value=value))
 
 def whitelist_add(type, arg):
+	"""
+	Adds entries to the given whitelist type.
+	"""
 	# Create a list from the current setting
 	values = whitelist_config_get_value('whitelists', type).split()
 	# Add the new value to the list.
@@ -421,6 +479,9 @@ def whitelist_add(type, arg):
 	whitelist_config_set_value('whitelists', type, " ".join(sorted(set(values))))
 
 def whitelist_del(type, arg):
+	"""
+	Removes entries from the given whitelist type.
+	"""
 	values = whitelist_config_get_value('whitelists', type).split()
 	try:
 		values.remove(arg)
@@ -431,6 +492,9 @@ def whitelist_del(type, arg):
 			type=type))
 
 def whitelist_cmd_split(count, args, default=None):
+	"""
+	Splits the whitelist command line
+	"""
 	# Hilarious.
 	args = args.split()
 	while len(args) < count:
@@ -439,6 +503,9 @@ def whitelist_cmd_split(count, args, default=None):
 	return args[:3]
 
 def whitelist_cmd(userdata, buffer, args):
+	"""
+	Parses whitelist commands and takes actions.
+	"""
 	(cmd, type, arg) = whitelist_cmd_split(3, args)
 
 	if cmd in (None, '', 'list'):
