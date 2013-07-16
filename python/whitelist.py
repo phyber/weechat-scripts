@@ -128,6 +128,8 @@ FIELD_TYPE_FUNC = {
 		't': weechat.infolist_time,
 		}
 
+CTCP_MARKER = '\001'
+
 # Host to RegEx mappings
 HTR = {x:x for x in (chr(x) for x in xrange(256))}
 HTR['?'] = '.'
@@ -176,7 +178,7 @@ def parse_message(server, signal_data):
 	details['message'] = details['arguments'].split(" :", 1)[1]
 
 	# If the message starts and ends with \001, it's a CTCP
-	if details['message'].startswith('\001') and details['message'].endswith('\001'):
+	if details['message'].startswith(CTCP_MARKER) and details['message'].endswith(CTCP_MARKER):
 		details['ctcp'] = True
 	else:
 		details['ctcp'] = False
@@ -452,12 +454,10 @@ def whitelist_privmsg_modifier_cb(userdata, modifier, server, raw_irc_msg):
 	"""
 	details = parse_message(server, raw_irc_msg)
 
-	# Only operate on private messages.
-	if not details['ctcp']:
-		if not details['channel'].startswith('#'):
-			block = whitelist_check(server, details)
-			if block:
-				return ""
+	if not details['channel'].startswith('#'):
+		block = whitelist_check(server, details)
+		if block:
+			return ""
 
 	# Return the unmodified raw message if we're not blocking
 	# or it's not a private message.
