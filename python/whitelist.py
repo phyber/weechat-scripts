@@ -238,7 +238,7 @@ def whitelist_config_set_value(section_name, option_name, value):
 	rc = weechat.config_option_set(option, value, 1)
 	return rc
 
-class infolist_generator(object):
+class InfolistGenerator(object):
 	def __init__(self, infolist_name, pointer, infolist_args):
 		self.infolist_name = infolist_name
 		self.pointer = pointer
@@ -286,7 +286,7 @@ def whitelist_infolist_get_value(infolist_name, server, element):
 	"""
 	Return the first instance of element from the infolist
 	"""
-	with infolist_generator(infolist_name, "", server) as infolist:
+	with InfolistGenerator(infolist_name, "", server) as infolist:
 		for row in infolist:
 			return row.get(element)
 
@@ -296,7 +296,7 @@ def whitelist_get_channels(server):
 	"""
 	channels = []
 
-	with infolist_generator("irc_channel", "", server) as infolist:
+	with InfolistGenerator("irc_channel", "", server) as infolist:
 		channels = [row['name'] for row in infolist if row['name'].startswith('#')]
 
 	return channels
@@ -307,7 +307,7 @@ def whitelist_get_channel_nicks(server, channel):
 	"""
 	nicks = []
 
-	with infolist_generator("irc_nick", "", "{server},{channel}".format(
+	with InfolistGenerator("irc_nick", "", "{server},{channel}".format(
 		server=server,
 		channel=channel)) as infolist:
 		nicks = [row['name'] for row in infolist]
