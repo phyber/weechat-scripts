@@ -115,8 +115,10 @@ SCRIPT_CONFIG = {
 WHITELIST_TYPE_ALIAS = {
 		'host': "hosts",
 		'network': "networks",
+		'net': "networks",
 		'nick': "nicks",
 		'channel': "channels",
+		'chan': "channels",
 		}
 
 FIELD_TYPE_FUNC = {
@@ -189,7 +191,10 @@ def whitelist_config_init():
 	"""
 	Initialize the whitelist configuration.
 	"""
-	config_file = weechat.config_new("whitelist", "whitelist_config_reload_cb", "")
+	config_file = weechat.config_new("whitelist",
+			"whitelist_config_reload_cb",
+			""
+			)
 	if not config_file:
 		return None
 
@@ -215,9 +220,12 @@ def whitelist_config_init():
 				props['default'],
 				props['default'],
 				0,
-				props['check_cb'], "",
-				props['change_cb'], props['change_data'],
-				props['delete_cb'], ""
+				props['check_cb'],
+				"",
+				props['change_cb'],
+				props['change_data'],
+				props['delete_cb'],
+				""
 			)
 
 	return config_file
@@ -247,7 +255,8 @@ def whitelist_config_option_change_cb(userdata, option):
 	section = weechat.config_search_section(config_file, userdata)
 	weechat.prnt("", "Whitelisted {type} now: {values}".format(
 		type=userdata,
-		values=whitelist_config_get_value('whitelists', userdata)))
+		values=whitelist_config_get_value('whitelists', userdata))
+		)
 	return weechat.WEECHAT_RC_OK
 
 def whitelist_config_get_value(section_name, option_name):
@@ -371,7 +380,11 @@ def whitelist_completion_sections(userdata, completion_item, buffer, completion)
 	Add hooks for whitelist completion.
 	"""
 	for section in SCRIPT_CONFIG['whitelists']:
-		weechat.hook_completion_list_add(completion, section, 0, weechat.WEECHAT_LIST_POS_SORT)
+		weechat.hook_completion_list_add(completion,
+				section,
+				0,
+				weechat.WEECHAT_LIST_POS_SORT
+				)
 	return weechat.WEECHAT_RC_OK
 
 def whitelist_check(server, details):
@@ -381,8 +394,12 @@ def whitelist_check(server, details):
 	nick = details['nick']
 	host = details['host']
 
-	current_addr = whitelist_infolist_get_value("irc_server", server, "current_address")
-	whitelist_networks = filter(None, whitelist_config_get_value('whitelists', 'networks').split(" "))
+	current_addr = whitelist_infolist_get_value(
+			"irc_server", server, "current_address"
+			)
+	whitelist_networks = filter(None,
+			whitelist_config_get_value('whitelists', 'networks').split(" ")
+			)
 	#whitelist_networks.append(current_addr)
 
 	# FIRST: Check if we have whitelisted things on this network.
@@ -431,7 +448,8 @@ def whitelist_check(server, details):
 		weechat.prnt("", "[{server}] {nick} [{host}] attempted to send you a private message.".format(
 			server=server,
 			nick=nick,
-			host=host))
+			host=host)
+			)
 
 	# Log the message
 	if whitelist_config_get_value('general', 'logging'):
@@ -443,7 +461,8 @@ def whitelist_check(server, details):
 				server=server,
 				nick=nick,
 				host=host,
-				message=details['message']))
+				message=details['message'])
+				)
 
 	# Block it
 	return True
@@ -471,7 +490,8 @@ def whitelist_list():
 		value = whitelist_config_get_value('whitelists', section)
 		weechat.prnt("", "{section}: {value}".format(
 			section=section,
-			value=value))
+			value=value)
+			)
 
 def whitelist_add(type, arg):
 	"""
@@ -483,7 +503,10 @@ def whitelist_add(type, arg):
 	values.append(arg)
 	# Set the new option value. We use a set here to ensure uniqueness and
 	# we sort it just so that output is nicer.
-	whitelist_config_set_value('whitelists', type, " ".join(sorted(set(values))))
+	whitelist_config_set_value('whitelists',
+			type,
+			" ".join(sorted(set(values)))
+			)
 
 def whitelist_del(type, arg):
 	"""
@@ -496,7 +519,8 @@ def whitelist_del(type, arg):
 	except:
 		weechat.prnt("", "Whitelist error. '{arg}' not found in '{type}'.".format(
 			arg=arg,
-			type=type))
+			type=type)
+			)
 
 def whitelist_cmd_split(count, args, default=None):
 	"""
@@ -532,12 +556,13 @@ def whitelist_cmd(userdata, buffer, args):
 				whitelist_del(type, arg)
 		else:
 			weechat.prnt("", "Error. Must supply an argument to '{type}'.".format(
-				type=type))
+				type=type)
+				)
 	else:
 		weechat.prnt("", "Error. Valid whitelist types are: {types}.".format(
-			types=", ".join(valid_option_types)))
+			types=", ".join(valid_option_types))
+			)
 
-	#weechat.prnt("", "UD: '{}' / BUF: '{}' / ARGS: '{}'".format(userdata, weechat.buffer_get_string(buffer, "name"), arg))
 	return weechat.WEECHAT_RC_OK
 
 if __name__ == '__main__':
@@ -549,7 +574,10 @@ if __name__ == '__main__':
 		valid_option_types |= {k for k in WHITELIST_TYPE_ALIAS.keys()}
 		weechat_version = weechat.info_get("version_number", "") or 0
 		weechat_dir = weechat.info_get("weechat_dir", "")
-		weechat.hook_modifier("irc_in_privmsg", "whitelist_privmsg_modifier_cb", "")
+		weechat.hook_modifier("irc_in_privmsg",
+				"whitelist_privmsg_modifier_cb",
+				""
+				)
 		weechat.hook_command(SCRIPT_COMMAND, "Manage the whitelist",
 			# OPTION ARGUMENTS
 			"list"
@@ -574,4 +602,8 @@ if __name__ == '__main__':
 			# COMMAND TO CALL + USERDATA
 			"whitelist_cmd", ""
 		)
-		weechat.hook_completion("whitelist_args", "list of whitelist arguments", "whitelist_completion_sections", "")
+		weechat.hook_completion("whitelist_args",
+				"list of whitelist arguments",
+				"whitelist_completion_sections",
+				""
+				)
