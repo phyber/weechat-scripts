@@ -112,13 +112,13 @@ SCRIPT_CONFIG = {
 	},
 }
 
-FIELD_TYPES = {
+FIELD_TYPE_FUNC = {
 		# Not available to API
-		#'b': "infolist_buffer",
-		'i': "infolist_integer",
-		'p': "infolist_pointer",
-		's': "infolist_string",
-		't': "infolist_time",
+		#'b': weechat.infolist_buffer,
+		'i': weechat.infolist_integer,
+		'p': weechat.infolist_pointer,
+		's': weechat.infolist_string,
+		't': weechat.infolist_time,
 		}
 
 # Host to RegEx mappings
@@ -262,22 +262,17 @@ class infolist_generator(object):
 
 	def get_fields(self):
 		fields = {}
-		try:
-			for field in weechat.infolist_fields(self._infolist).split(","):
-				(field_type, field_name) = field.split(":")
-				infolist_function = FIELD_TYPES.get(field_type, None)
-
-				# Skip infolist types that we can't handle.
-				if infolist_function is None:
-					continue
-
-				field_value = getattr(weechat, infolist_function)(
-						self._infolist, field_name
+		for field in weechat.infolist_fields(self._infolist).split(","):
+			(field_type, field_name) = field.split(":")
+			try:
+				field_value = FIELD_TYPE_FUNC[field_type](
+						self._infolist,
+						field_name
 						)
-				fields[field_name] = field_value
-			return fields
-		except TypeError as e:
-			weechat.prnt("", "Exception: {}".format(e))
+			except KeyError as e:
+				continue
+			fields[field_name] = field_value
+		return fields
 
 	def next(self):
 		# Advance the infolist
