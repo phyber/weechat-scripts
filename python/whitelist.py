@@ -534,7 +534,7 @@ if __name__ == '__main__':
 		config_file = whitelist_config_init()
 		if config_file:
 			whitelist_config_read(config_file)
-		valid_option_types = set(k for k in SCRIPT_CONFIG['whitelists'].keys())
+		valid_option_types = {k for k in SCRIPT_CONFIG['whitelists'].keys()}
 		weechat_version = weechat.info_get("version_number", "") or 0
 		weechat_dir = weechat.info_get("weechat_dir", "")
 		weechat.hook_modifier("irc_in_privmsg", "whitelist_privmsg_modifier_cb", "")
