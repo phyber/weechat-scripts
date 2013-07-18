@@ -353,27 +353,21 @@ def whitelist_get_channels(server):
 	"""
 	Get a list of channels on the given server.
 	"""
-	channels = []
-
 	with InfolistGenerator("irc_channel", "", server) as infolist:
-		channels = [row['name']
-				for row in infolist
-				if row['name'].startswith('#')]
-
-	return channels
+		for row in infolist:
+			if row['name'].startswith('#'):
+				yield row['name']
 
 def whitelist_get_channel_nicks(server, channel):
 	"""
 	Get a list of nicks in the given channel on the given server
 	"""
-	nicks = []
-
 	with InfolistGenerator("irc_nick", "", "{server},{channel}".format(
 		server=server,
 		channel=channel)) as infolist:
-		nicks = [row['name'] for row in infolist]
-
-	return nicks
+		#nicks = [row['name'] for row in infolist]
+		for row in infolist:
+			yield row['name']
 
 def whitelist_completion_sections(userdata, completion_item, buffer, completion):
 	"""
