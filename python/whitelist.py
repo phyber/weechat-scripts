@@ -153,6 +153,62 @@ def host_to_regex(host):
 	host = host_to_lower(host)
 	return re.sub('(.)', lambda match: HTR[match.group(0)], host)
 
+class InfolistGenerator(object):
+	"""
+	Infolist context manager/generator for easy use of infolists.
+	Accepts the same arguments as weechat's infolist_get function.
+
+	>>> with InfolistGenerator("irc_channel", "", "server_name") as infolist:
+	>>>     channels = [row['name']
+	>>>         for row in infolist
+	>>>         if row['name'].startswith('#')]
+	"""
+
+	def __init__(self, infolist_name, pointer, infolist_args):
+		self.infolist_name = infolist_name
+		self.pointer = pointer
+		self.infolist_args = infolist_args
+		self._infolist = None
+
+	def __enter__(self):
+		self._infolist = weechat.infolist_get(
+				self.infolist_name,
+				self.pointer,
+				self.infolist_args
+				)
+		return self
+
+	def __exit__(self, *exc_info):
+		weechat.infolist_free(self._infolist)
+		self._infolist = None
+
+	def __iter__(self):
+		return self
+
+	def get_fields(self):
+		"""
+		Return a dict of the fields in the current infolist position.
+		"""
+		fields = {}
+		for field in weechat.infolist_fields(self._infolist).split(","):
+			(field_type, field_name) = field.split(":")
+			try:
+				field_value = FIELD_TYPE_FUNC[field_type](
+						self._infolist,
+						field_name
+						)
+			except KeyError as e:
+				continue
+			fields[field_name] = field_value
+		return fields
+
+	def next(self):
+		if weechat.infolist_next(self._infolist):
+			fields = self.get_fields()
+			return fields
+		else:
+			raise StopIteration
+
 class Message(object):
 	def __init__(self, server, signal_data):
 		self._server = server
@@ -322,62 +378,6 @@ def whitelist_config_set_value(section_name, option_name, value):
 
 	rc = weechat.config_option_set(option, value, 1)
 	return rc
-
-class InfolistGenerator(object):
-	"""
-	Infolist context manager/generator for easy use of infolists.
-	Accepts the same arguments as weechat's infolist_get function.
-
-	>>> with InfolistGenerator("irc_channel", "", "server_name") as infolist:
-	>>>     channels = [row['name']
-	>>>         for row in infolist
-	>>>         if row['name'].startswith('#')]
-	"""
-
-	def __init__(self, infolist_name, pointer, infolist_args):
-		self.infolist_name = infolist_name
-		self.pointer = pointer
-		self.infolist_args = infolist_args
-		self._infolist = None
-
-	def __enter__(self):
-		self._infolist = weechat.infolist_get(
-				self.infolist_name,
-				self.pointer,
-				self.infolist_args
-				)
-		return self
-
-	def __exit__(self, *exc_info):
-		weechat.infolist_free(self._infolist)
-		self._infolist = None
-
-	def __iter__(self):
-		return self
-
-	def get_fields(self):
-		"""
-		Return a dict of the fields in the current infolist position.
-		"""
-		fields = {}
-		for field in weechat.infolist_fields(self._infolist).split(","):
-			(field_type, field_name) = field.split(":")
-			try:
-				field_value = FIELD_TYPE_FUNC[field_type](
-						self._infolist,
-						field_name
-						)
-			except KeyError as e:
-				continue
-			fields[field_name] = field_value
-		return fields
-
-	def next(self):
-		if weechat.infolist_next(self._infolist):
-			fields = self.get_fields()
-			return fields
-		else:
-			raise StopIteration
 
 def whitelist_infolist_get_value(infolist_name, server, element):
 	"""
