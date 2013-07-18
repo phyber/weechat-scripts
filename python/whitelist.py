@@ -153,58 +153,24 @@ def host_to_regex(host):
 	host = host_to_lower(host)
 	return re.sub('(.)', lambda match: HTR[match.group(0)], host)
 
-def parse_message(server, signal_data):
-	"""
-	Return details for private messages
-	"""
-	if int(weechat_version) >= 0x00030400:
-		# Newer (>=0.3.4) versions of WeeChat can prepare a hash with most of
-		# what we want.
-		details = weechat.info_get_hashtable("irc_message_parse", {
-			"message":	signal_data,
-			"server":	server
-		})
-	else:
-		# WeeChat <0.3.4 we have to construct it ourselves.
-		(source, command, channel, message) = signal_data.split(" ", 3)
-		details = {}
-		details['arguments'] = "{channel} {message}".format(
-				channel=channel,
-				message=message)
-		details['channel'] = channel
-		details['command'] = command
-		details['host'] = source.lstrip(":")
-		details['nick'] = weechat.info_get("irc_nick_from_host", signal_data)
-
-	# WeeChat leaves this important part to us. Get the actual message.
-	details['message'] = details['arguments'].split(" :", 1)[1]
-
-	# If the message starts and ends with \001, it's a CTCP
-	if details['message'].startswith(CTCP_MARKER) and details['message'].endswith(CTCP_MARKER):
-		details['ctcp'] = True
-	else:
-		details['ctcp'] = False
-
-	return details
-
 class Message(object):
 	def __init__(self, server, signal_data):
 		self._server = server
 		self._signal_data = signal_data
 		self.details = None
-		self.parse_message()
+		self._parse_message()
 
-	def parse_message(self):
+	def _parse_message(self):
 		if int(weechat_version) >= 0x00030400:
 			# Newer (>=0.3.4) versions of WeeChat can prepare a hash with most of
 			# what we want.
 			self.details = weechat.info_get_hashtable("irc_message_parse", {
-				"message":	self.signal_data,
-				"server":	self.server
+				"message":	self._signal_data,
+				"server":	self._server
 			})
 		else:
 			# WeeChat <0.3.4 we have to construct it ourselves.
-			(source, command, channel, message) = self.signal_data.split(" ", 3)
+			(source, command, channel, message) = self._signal_data.split(" ", 3)
 			self.details = {}
 			self.details['arguments'] = "{channel} {message}".format(
 					channel=channel,
@@ -437,7 +403,6 @@ def whitelist_get_channel_nicks(server, channel):
 	with InfolistGenerator("irc_nick", "", "{server},{channel}".format(
 		server=server,
 		channel=channel)) as infolist:
-		#nicks = [row['name'] for row in infolist]
 		for row in infolist:
 			yield row['name']
 
@@ -453,12 +418,13 @@ def whitelist_completion_sections(userdata, completion_item, buffer, completion)
 				)
 	return weechat.WEECHAT_RC_OK
 
-def whitelist_check(server, details):
+def whitelist_check(message):
 	"""
 	Return a boolean indicating if the given details are whitelisted or not.
 	"""
-	nick = details['nick']
-	host = details['host']
+	nick = message.nick()
+	host = message.host()
+	server = message.server()
 
 	current_addr = whitelist_infolist_get_value(
 			"irc_server", server, "current_address"
@@ -546,7 +512,7 @@ def whitelist_check(server, details):
 				server=server,
 				nick=nick,
 				host=host,
-				message=details['message'])
+				message=message.message())
 				)
 
 	# Block it
@@ -556,12 +522,10 @@ def whitelist_privmsg_modifier_cb(userdata, modifier, server, raw_irc_msg):
 	"""
 	Modifies the raw_irc_msg depending on whitelisted status.
 	"""
-	details = parse_message(server, raw_irc_msg)
-	#message = Message(server, raw_irc_msg)
+	message = Message(server, raw_irc_msg)
 
-	if not details['channel'].startswith('#'):
-	#if message.is_query():
-		block = whitelist_check(server, details)
+	if message.is_query():
+		block = whitelist_check(message)
 		if block:
 			return ""
 
