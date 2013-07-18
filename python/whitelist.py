@@ -394,7 +394,6 @@ def whitelist_check(server, details):
 	whitelist_networks = filter(None,
 			whitelist_config_get_value('whitelists', 'networks').split(" ")
 			)
-	#whitelist_networks.append(current_addr)
 
 	# FIRST: Check if we have whitelisted things on this network.
 	if server in whitelist_networks:
