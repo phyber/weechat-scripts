@@ -603,11 +603,11 @@ if __name__ == '__main__':
 			"\n"
 			"Examples:\n"
 			"  Add entries to whitelist:\n"
-			"    /whitelist add network Freenode\n"
+			"    /whitelist add net[work] Freenode\n"
 			"    /whitelist add host *!buddy@*.isp.com\n"
 			"  Delete entries from whitelist:\n"
 			"    /whitelist del nick Someguy\n"
-			"    /whitelist del channel #weechat\n",
+			"    /whitelist del chan[nel] #weechat\n",
 			# COMPLETIONS
 			"list %(whitelist_args)"
 			" || add %(whitelist_args)"
