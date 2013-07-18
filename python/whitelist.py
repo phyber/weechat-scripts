@@ -113,12 +113,12 @@ SCRIPT_CONFIG = {
 }
 
 WHITELIST_TYPE_ALIAS = {
-		'host': "hosts",
-		'network': "networks",
-		'net': "networks",
-		'nick': "nicks",
-		'channel': "channels",
 		'chan': "channels",
+		'channel': "channels",
+		'host': "hosts",
+		'net': "networks",
+		'network': "networks",
+		'nick': "nicks",
 		}
 
 FIELD_TYPE_FUNC = {
