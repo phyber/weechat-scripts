@@ -210,6 +210,9 @@ class InfolistGenerator(object):
 			raise StopIteration
 
 class Message(object):
+	"""
+	Parse raw signal_data from WeeChat into something more managable.
+	"""
 	def __init__(self, server, signal_data):
 		self._server = server
 		self._signal_data = signal_data
@@ -217,6 +220,9 @@ class Message(object):
 		self._parse_message()
 
 	def _parse_message(self):
+		"""
+		Parse the signal_data
+		"""
 		if int(weechat_version) >= 0x00030400:
 			# Newer (>=0.3.4) versions of WeeChat can prepare a hash with most of
 			# what we want.
@@ -240,45 +246,87 @@ class Message(object):
 		self.details['message'] = self.details['arguments'].split(" :", 1)[1]
 
 	def arguments(self):
+		"""
+		Return the command arguments
+		"""
 		return self.details['arguments']
 
 	def channel(self):
+		"""
+		Return channel portion of message.
+
+		This might be better named "target", since it could be the
+		nick of a user being queried.
+		"""
 		return self.details['channel']
 
 	def command(self):
+		"""
+		Returns the IRC protocol command, eg. PRIVMSG.
+		"""
 		return self.details['command']
 
 	def host(self):
+		"""
+		Return the host for the sender of the message
+		"""
 		return self.details['host']
 
 	def hostname(self):
+		"""
+		Return the hostname for the sender of the message
+		"""
 		return self.host().split('@')[1]
 
 	def ident(self):
+		"""
+		Return the ident
+		"""
 		return self.host().split('!')[1]
 
 	def message(self):
+		"""
+		Return the message
+		"""
 		return self.details['message']
 
 	def nick(self):
+		"""
+		Return the message sender nick
+		"""
 		return self.details['nick']
 
 	def server(self):
+		"""
+		Return the server
+		"""
 		return self._server
 
 	def signal_data(self):
+		"""
+		Return the raw signal data
+		"""
 		return self._signal_data
 
 	def is_channel(self):
+		"""
+		Return True if the message is from an IRC channel
+		"""
 		return self.channel().startswith('#')
 
 	def is_ctcp(self):
+		"""
+		Return True if the message is a CTCP
+		"""
 		message = self.message()
 		if message.startswith(CTCP_MARKER) and message.endswith(CTCP_MARKER):
 			return True
 		return False
 
 	def is_query(self):
+		"""
+		Return True if the message is from a query
+		"""
 		return not self.is_channel()
 
 def whitelist_config_init():
