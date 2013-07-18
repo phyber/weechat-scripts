@@ -187,6 +187,78 @@ def parse_message(server, signal_data):
 
 	return details
 
+class Message(object):
+	def __init__(self, server, signal_data):
+		self._server = server
+		self._signal_data = signal_data
+		self.details = None
+		self.parse_message()
+
+	def parse_message(self):
+		if int(weechat_version) >= 0x00030400:
+			# Newer (>=0.3.4) versions of WeeChat can prepare a hash with most of
+			# what we want.
+			self.details = weechat.info_get_hashtable("irc_message_parse", {
+				"message":	self.signal_data,
+				"server":	self.server
+			})
+		else:
+			# WeeChat <0.3.4 we have to construct it ourselves.
+			(source, command, channel, message) = self.signal_data.split(" ", 3)
+			self.details = {}
+			self.details['arguments'] = "{channel} {message}".format(
+					channel=channel,
+					message=message)
+			self.details['channel'] = channel
+			self.details['command'] = command
+			self.details['host'] = source.lstrip(":")
+			self.details['nick'] = weechat.info_get("irc_nick_from_host", signal_data)
+
+		# WeeChat leaves this important part to us. Get the actual message.
+		self.details['message'] = self.details['arguments'].split(" :", 1)[1]
+
+	def arguments(self):
+		return self.details['arguments']
+
+	def channel(self):
+		return self.details['channel']
+
+	def command(self):
+		return self.details['command']
+
+	def host(self):
+		return self.details['host']
+
+	def hostname(self):
+		return self.host().split('@')[1]
+
+	def ident(self):
+		return self.host().split('!')[1]
+
+	def message(self):
+		return self.details['message']
+
+	def nick(self):
+		return self.details['nick']
+
+	def server(self):
+		return self._server
+
+	def signal_data(self):
+		return self._signal_data
+
+	def is_channel(self):
+		return self.channel().startswith('#')
+
+	def is_ctcp(self):
+		message = self.message()
+		if message.startswith(CTCP_MARKER) and message.endswith(CTCP_MARKER):
+			return True
+		return False
+
+	def is_query(self):
+		return not self.is_channel()
+
 def whitelist_config_init():
 	"""
 	Initialize the whitelist configuration.
@@ -485,8 +557,10 @@ def whitelist_privmsg_modifier_cb(userdata, modifier, server, raw_irc_msg):
 	Modifies the raw_irc_msg depending on whitelisted status.
 	"""
 	details = parse_message(server, raw_irc_msg)
+	#message = Message(server, raw_irc_msg)
 
 	if not details['channel'].startswith('#'):
+	#if message.is_query():
 		block = whitelist_check(server, details)
 		if block:
 			return ""
