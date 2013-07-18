@@ -424,7 +424,21 @@ def whitelist_check(server, details):
 	# THIRD: Check the hosts.
 	# Split up the hosts and filter them for empty strings.
 	for whitelisted_host in filter(None, whitelist_config_get_value('whitelists', 'hosts').split(" ")):
-		# 1. Check if the whitelisted host matches.
+		# Check for localised host
+		# @ will always exist in hosts, so try to split and just pass
+		# on ValueError, which means there was no @server portion.
+		try:
+			(white_name, white_host, whitelisted_server) = whitelisted_host.split('@', 2)
+			# Skip if this host is for another server
+			if server != whitelisted_server:
+				continue
+			# Fixup the whitelisted_host
+			whitelisted_host = "{name}@{host}".format(
+					name=white_name,
+					host=white_host)
+		except ValueError as e:
+			pass
+		# Check if the whitelisted host matches.
 		if re.match(host_to_regex(whitelisted_host), host):
 			return False
 
@@ -434,7 +448,7 @@ def whitelist_check(server, details):
 		# Check for localised channel
 		if '@' in whitelisted_channel:
 			(whitelisted_channel, whitelisted_server) = whitelisted_channel.split('@', 1)
-			# Skip if server != whitelisted_server
+			# Skip if channel is for another server
 			if server != whitelisted_server:
 				continue
 		channel_nicks = whitelist_get_channel_nicks(server, whitelisted_channel)
