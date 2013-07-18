@@ -431,6 +431,12 @@ def whitelist_check(server, details):
 	# FOURTH: Check the channels.
 	# Check each whitelisted channel to see if the nick is in one of those channels
 	for whitelisted_channel in filter(None, whitelist_config_get_value('whitelists', 'channels').split(" ")):
+		# Check for localised channel
+		if '@' in whitelisted_channel:
+			(whitelisted_channel, whitelisted_server) = whitelisted_channel.split('@', 1)
+			# Skip if server != whitelisted_server
+			if server != whitelisted_server:
+				continue
 		channel_nicks = whitelist_get_channel_nicks(server, whitelisted_channel)
 		# 1. Check if the nick is in the channel.
 		if nick in channel_nicks:
