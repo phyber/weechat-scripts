@@ -219,6 +219,9 @@ class Message(object):
 		self.details = None
 		self._parse_message()
 
+	def __str__(self):
+		return self.signal_data()
+
 	def _parse_message(self):
 		"""
 		Parse the signal_data
