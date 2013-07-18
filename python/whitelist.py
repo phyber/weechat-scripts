@@ -410,15 +410,15 @@ def whitelist_check(server, details):
 			return False
 
 	# SECOND: Check the nicks.
-	for whitenick_entry in filter(None, whitelist_config_get_value('whitelists', 'nicks').split(" ")):
+	for whitelisted_nick in filter(None, whitelist_config_get_value('whitelists', 'nicks').split(" ")):
 		# 1. Simple check, is the nick itself whitelisted.
-		if whitenick_entry == nick:
+		if whitelisted_nick == nick:
 			return False
 		# 2. Is the nick localised to the current server
-		if whitenick_entry == "{nick}@{server}".format(nick=nick, server=server):
+		if whitelisted_nick == "{nick}@{server}".format(nick=nick, server=server):
 			return False
 		# 3. Last try, is it localised to the current server addr?
-		if whitenick_entry == "{nick}@{addr}".format(nick=nick, addr=current_addr):
+		if whitelisted_nick == "{nick}@{addr}".format(nick=nick, addr=current_addr):
 			return False
 
 	# THIRD: Check the hosts.
