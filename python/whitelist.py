@@ -455,14 +455,16 @@ def whitelist_check(message):
 				'whitelists', 'nicks').split(" ")
 			if x]:
 		# 1. Simple check, is the nick itself whitelisted.
-		if whitelisted_nick == nick:
-			return False
-		# 2. Is the nick localised to the current server
-		if whitelisted_nick == "{nick}@{server}".format(nick=nick, server=server):
-			return False
-		# 3. Last try, is it localised to the current server addr?
-		if whitelisted_nick == "{nick}@{addr}".format(nick=nick, addr=current_addr):
-			return False
+		nick_variations = [
+				nick,
+				# Nick localised to the current server
+				"{nick}@{server}".format(nick=nick, server=server),
+				# Nick localised to the current server addr
+				"{nick}@{addr}".format(nick=nick, addr=current_addr),
+				]
+		for variation in nick_variations:
+			if whitelisted_nick == variation:
+				return False
 
 	# THIRD: Check the hosts.
 	# Split up the hosts and filter them for empty strings.
