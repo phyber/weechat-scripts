@@ -430,9 +430,10 @@ def whitelist_check(message):
 	current_addr = whitelist_infolist_get_value(
 			"irc_server", server, "current_address"
 			)
-	whitelist_networks = filter(None,
-			whitelist_config_get_value('whitelists', 'networks').split(" ")
-			)
+	whitelist_networks = [x for x
+			in whitelist_config_get_value(
+				'whitelists', 'networks').split(" ")
+			if x]
 
 	# FIRST: Check if we have whitelisted things on this network.
 	if server in whitelist_networks:
@@ -449,8 +450,10 @@ def whitelist_check(message):
 			return False
 
 	# SECOND: Check the nicks.
-	for whitelisted_nick in filter(None,
-			whitelist_config_get_value('whitelists', 'nicks').split(" ")):
+	for whitelisted_nick in [x for x
+			in whitelist_config_get_value(
+				'whitelists', 'nicks').split(" ")
+			if x]:
 		# 1. Simple check, is the nick itself whitelisted.
 		if whitelisted_nick == nick:
 			return False
@@ -463,8 +466,10 @@ def whitelist_check(message):
 
 	# THIRD: Check the hosts.
 	# Split up the hosts and filter them for empty strings.
-	for whitelisted_host in filter(None,
-			whitelist_config_get_value('whitelists', 'hosts').split(" ")):
+	for whitelisted_host in [x for x
+			in whitelist_config_get_value(
+				'whitelists', 'hosts').split(" ")
+			if x]:
 		# Check for localised host
 		# @ will always exist in hosts, so try to split and just pass
 		# on ValueError, which means there was no @server portion.
@@ -485,8 +490,10 @@ def whitelist_check(message):
 
 	# FOURTH: Check the channels.
 	# Check each whitelisted channel to see if the nick is in one of those channels
-	for whitelisted_channel in filter(None,
-			whitelist_config_get_value('whitelists', 'channels').split(" ")):
+	for whitelisted_channel in [x for x
+			in whitelist_config_get_value(
+				'whitelists', 'channels').split(" ")
+			if x]:
 		# Check for localised channel
 		if '@' in whitelisted_channel:
 			(whitelisted_channel, whitelisted_server) = whitelisted_channel.split('@', 1)
