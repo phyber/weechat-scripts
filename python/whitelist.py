@@ -1,6 +1,6 @@
 try:
 	import weechat
-except:
+except ImportError:
 	import sys
 	print("This script must be run under WeeChat")
 	sys.exit(1)
@@ -197,6 +197,7 @@ class InfolistGenerator(object):
 		return fields
 
 	def next(self):
+		"""Return the next set of fields"""
 		if weechat.infolist_next(self._infolist):
 			fields = self.get_fields()
 			return fields
@@ -233,12 +234,15 @@ class Message(object):
 			self.details['channel'] = channel
 			self.details['command'] = command
 			self.details['host'] = source.lstrip(":")
-			self.details['nick'] = weechat.info_get("irc_nick_from_host", self.signal_data())
+			self.details['nick'] = weechat.info_get(
+					"irc_nick_from_host",
+					self.signal_data())
 
 		# WeeChat leaves this important part to us. Get the actual message.
 		self.details['message'] = self.arguments().split(" :", 1)[1]
 
 	def arguments(self):
+		"""Return the command arguments"""
 		return self.details['arguments']
 
 	def channel(self):
@@ -444,7 +448,8 @@ def whitelist_check(message):
 			return False
 
 	# SECOND: Check the nicks.
-	for whitelisted_nick in filter(None, whitelist_config_get_value('whitelists', 'nicks').split(" ")):
+	for whitelisted_nick in filter(None,
+			whitelist_config_get_value('whitelists', 'nicks').split(" ")):
 		# 1. Simple check, is the nick itself whitelisted.
 		if whitelisted_nick == nick:
 			return False
@@ -457,7 +462,8 @@ def whitelist_check(message):
 
 	# THIRD: Check the hosts.
 	# Split up the hosts and filter them for empty strings.
-	for whitelisted_host in filter(None, whitelist_config_get_value('whitelists', 'hosts').split(" ")):
+	for whitelisted_host in filter(None,
+			whitelist_config_get_value('whitelists', 'hosts').split(" ")):
 		# Check for localised host
 		# @ will always exist in hosts, so try to split and just pass
 		# on ValueError, which means there was no @server portion.
@@ -478,7 +484,8 @@ def whitelist_check(message):
 
 	# FOURTH: Check the channels.
 	# Check each whitelisted channel to see if the nick is in one of those channels
-	for whitelisted_channel in filter(None, whitelist_config_get_value('whitelists', 'channels').split(" ")):
+	for whitelisted_channel in filter(None,
+			whitelist_config_get_value('whitelists', 'channels').split(" ")):
 		# Check for localised channel
 		if '@' in whitelisted_channel:
 			(whitelisted_channel, whitelisted_server) = whitelisted_channel.split('@', 1)
@@ -492,7 +499,9 @@ def whitelist_check(message):
 
 	# Place a notification in the status window
 	if whitelist_config_get_value('general', 'notification'):
-		weechat.prnt("", "[{server}] {nick} [{host}] attempted to send you a private message.".format(
+		weechat.prnt("",
+				"[{server}] {nick} [{host}] "
+				"attempted to send you a private message.".format(
 			server=server,
 			nick=nick,
 			host=host)
@@ -601,7 +610,8 @@ def whitelist_cmd(userdata, buffer, args):
 	return weechat.WEECHAT_RC_OK
 
 if __name__ == '__main__':
-	if weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE, SCRIPT_DESC, "", ""):
+	if weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR,
+			SCRIPT_VERSION, SCRIPT_LICENSE, SCRIPT_DESC, "", ""):
 		config_file = whitelist_config_init()
 		if config_file:
 			whitelist_config_read(config_file)
