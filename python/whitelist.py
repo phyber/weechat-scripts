@@ -205,6 +205,13 @@ class InfolistGenerator(object):
 			fields[field_name] = field_value
 		return fields
 
+	def get_field(self, field):
+		"""Return a single field from the info list"""
+		try:
+			return self.next()[field]
+		except KeyError:
+			return None
+
 class Message(object):
 	"""Parse raw signal_data from WeeChat into something more managable."""
 	def __init__(self, server, signal_data):
@@ -315,14 +322,18 @@ class Message(object):
 		return False
 
 class Config(object):
-	def __init__(self):
+	"""Class for dealing with WeeChat configs."""
+	def __init__(self, config_name, reload_cb, reload_cb_data):
+		self._config_name = config_name
+		self._reload_cb = reload_cb
+		self._reload_cb_data = reload_cb_data
 		self._config_file = self.setup_config_file()
 
 	def setup_config_file(self):
-		"""Initialize the whitelist configuration."""
-		config_file = weechat.config_new("whitelist",
-				"whitelist_config_reload_cb",
-				""
+		"""Initialize the configuration."""
+		config_file = weechat.config_new(self._config_name,
+				self._reload_cb,
+				self._reload_cb_data
 				)
 		if not config_file:
 			return None
@@ -360,18 +371,19 @@ class Config(object):
 		return config_file
 
 	def is_ok(self):
+		"""Return True if config was loaded properly."""
 		return not self._config_file is None
 
 	def read(self):
-		"""Read the whitelist config file."""
+		"""Read the config file."""
 		return weechat.config_read(self._config_file)
 
 	def write(self):
-		"""Write the whitelist config file."""
+		"""Write the config file."""
 		return weechat.config_write(self._config_file)
 
 	def get_value(self, section_name, option_name):
-		"""Return a value from the whitelist configuration."""
+		"""Return a value from the configuration."""
 		# This is a lot of work to just get the value of an option.
 		section = weechat.config_search_section(self._config_file, section_name)
 		option = weechat.config_search_option(self._config_file, section, option_name)
@@ -402,12 +414,6 @@ def whitelist_config_option_change_cb(userdata, option):
 		values=config.get_value('whitelists', userdata))
 		)
 	return weechat.WEECHAT_RC_OK
-
-def whitelist_infolist_get_value(infolist_name, server, element):
-	"""Return the first instance of element from the infolist"""
-	with InfolistGenerator(infolist_name, "", server) as infolist:
-		for row in infolist:
-			return row.get(element)
 
 def whitelist_get_channels(server):
 	"""Get a list of channels on the given server."""
@@ -464,9 +470,9 @@ def whitelist_check_server(nick, server):
 
 def whitelist_check_nick(nick, server):
 	"""Check if nick is whitelisted"""
-	current_addr = whitelist_infolist_get_value(
-			"irc_server", server, "current_address"
-			)
+	with InfolistGenerator("irc_server", server, "") as infolist:
+		current_address = infolist.get_field('current_address')
+
 	for whitelisted_nick in [x for x
 			in config.get_value(
 				'whitelists', 'nicks').split(" ")
@@ -476,7 +482,7 @@ def whitelist_check_nick(nick, server):
 				# Nick localised to the current server
 				"{nick}@{server}".format(nick=nick, server=server),
 				# Nick localised to the current server addr
-				"{nick}@{addr}".format(nick=nick, addr=current_addr)]
+				"{nick}@{addr}".format(nick=nick, addr=current_address)]
 		for variation in nick_variations:
 			if whitelisted_nick == variation:
 				return True
@@ -659,7 +665,9 @@ def whitelist_cmd(userdata, buf, args):
 if __name__ == '__main__':
 	if weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR,
 			SCRIPT_VERSION, SCRIPT_LICENSE, SCRIPT_DESC, "", ""):
-		config = Config()
+		config = Config('whitelist',
+				'whitelist_config_reload_cb',
+				'')
 		if config.is_ok():
 			config.read()
 		VALID_OPTION_TYPES = ([
