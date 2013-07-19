@@ -421,6 +421,12 @@ def whitelist_completion_sections(userdata, completion_item, buf, completion):
 				)
 	return weechat.WEECHAT_RC_OK
 
+def whitelist_log(line):
+	whitelist_log_file = "{weechat_dir}/whitelist.log".format(
+			weechat_dir=WEECHAT_DIR)
+	with open(whitelist_log_file, 'a') as logfile:
+		logfile.write(line)
+
 def whitelist_check_server(nick, server):
 	"""Check if server is whitelisted"""
 	whitelist_networks = [x for x
@@ -539,10 +545,7 @@ def whitelist_check(message):
 
 	# Log the message
 	if whitelist_config_get_value('general', 'logging'):
-		whitelist_log_file = "{weechat_dir}/whitelist.log".format(
-				weechat_dir=WEECHAT_DIR)
-		with open(whitelist_log_file, 'a') as logfile:
-			logfile.write("{time}: [{server}] {nick} [{host}]: {message}\n".format(
+		whitelist_log("{time}: [{server}] {nick} [{host}]: {message}\n".format(
 				time=time.asctime(),
 				server=server,
 				nick=nick,
