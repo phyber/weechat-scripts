@@ -286,6 +286,10 @@ class Message(object):
 		"""Return the raw signal data"""
 		return self._signal_data
 
+	def is_action(self):
+		"""Return True if message is an action."""
+		return self.is_ctcp() and self.message()[1:7] == 'ACTION'
+
 	def is_channel(self):
 		"""Return True if the message is from an IRC channel"""
 		return self.channel().startswith('#')
@@ -298,8 +302,17 @@ class Message(object):
 		return False
 
 	def is_query(self):
-		"""Return True if the message is from a query"""
-		return not self.is_channel()
+		"""Return True if the message is from a query
+
+		CTCP ACTIONs are considered to be part of a query.
+		Other CTCPs will be treated as normal.
+		"""
+		is_query = not self.is_channel()
+		if is_query and self.is_action():
+			return True
+		if is_query and not self.is_ctcp():
+			return True
+		return False
 
 def whitelist_config_init():
 	"""Initialize the whitelist configuration."""
