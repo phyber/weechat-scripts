@@ -138,24 +138,20 @@ HTR['?'] = '.'
 HTR['*'] = '.*'
 
 def host_to_lower(host):
-	"""
-	Convert the hostname portion of an address string to lowercase.
-	"""
+	"""Convert the hostname portion of an address string to lowercase."""
 	(ident, hostname) = host.split("@", 1)
 	return "{ident}@{hostname}".format(
 			ident=ident,
 			hostname=hostname.lower())
 
 def host_to_regex(host):
-	"""
-	Convert host to a regex.
-	"""
+	"""Convert host to a regex."""
 	host = host_to_lower(host)
 	return re.sub('(.)', lambda match: HTR[match.group(0)], host)
 
 class InfolistGenerator(object):
-	"""
-	Infolist context manager/generator for easy use of infolists.
+	"""Infolist context manager/generator for easy use of infolists.
+
 	Accepts the same arguments as weechat's infolist_get function.
 
 	>>> with InfolistGenerator("irc_channel", "", "server_name") as infolist:
@@ -186,9 +182,7 @@ class InfolistGenerator(object):
 		return self
 
 	def get_fields(self):
-		"""
-		Return a dict of the fields in the current infolist position.
-		"""
+		"""Return a dict of the fields in the current infolist position."""
 		fields = {}
 		for field in weechat.infolist_fields(self._infolist).split(","):
 			(field_type, field_name) = field.split(":")
@@ -197,7 +191,7 @@ class InfolistGenerator(object):
 						self._infolist,
 						field_name
 						)
-			except KeyError as e:
+			except KeyError:
 				continue
 			fields[field_name] = field_value
 		return fields
@@ -210,9 +204,7 @@ class InfolistGenerator(object):
 			raise StopIteration
 
 class Message(object):
-	"""
-	Parse raw signal_data from WeeChat into something more managable.
-	"""
+	"""Parse raw signal_data from WeeChat into something more managable."""
 	def __init__(self, server, signal_data):
 		self._server = server
 		self._signal_data = signal_data
@@ -223,15 +215,13 @@ class Message(object):
 		return self.signal_data()
 
 	def _parse_message(self):
-		"""
-		Parse the signal_data
-		"""
-		if int(weechat_version) >= 0x00030400:
+		"""Parse the signal_data"""
+		if int(WEECHAT_VERSION) >= 0x00030400:
 			# Newer (>=0.3.4) versions of WeeChat can prepare a hash with most of
 			# what we want.
 			self.details = weechat.info_get_hashtable("irc_message_parse", {
-				"message":	self._signal_data,
-				"server":	self._server
+				"message":	self.signal_data(),
+				"server":	self.server()
 			})
 		else:
 			# WeeChat <0.3.4 we have to construct it ourselves.
@@ -243,20 +233,16 @@ class Message(object):
 			self.details['channel'] = channel
 			self.details['command'] = command
 			self.details['host'] = source.lstrip(":")
-			self.details['nick'] = weechat.info_get("irc_nick_from_host", signal_data)
+			self.details['nick'] = weechat.info_get("irc_nick_from_host", self.signal_data())
 
 		# WeeChat leaves this important part to us. Get the actual message.
-		self.details['message'] = self.details['arguments'].split(" :", 1)[1]
+		self.details['message'] = self.arguments().split(" :", 1)[1]
 
 	def arguments(self):
-		"""
-		Return the command arguments
-		"""
 		return self.details['arguments']
 
 	def channel(self):
-		"""
-		Return channel portion of message.
+		"""Return channel portion of message.
 
 		This might be better named "target", since it could be the
 		nick of a user being queried.
@@ -264,78 +250,54 @@ class Message(object):
 		return self.details['channel']
 
 	def command(self):
-		"""
-		Returns the IRC protocol command, eg. PRIVMSG.
-		"""
+		"""Returns the IRC protocol command, eg. PRIVMSG."""
 		return self.details['command']
 
 	def host(self):
-		"""
-		Return the host for the sender of the message
-		"""
+		"""Return the host for the sender of the message"""
 		return self.details['host']
 
 	def hostname(self):
-		"""
-		Return the hostname for the sender of the message
-		"""
+		"""Return the hostname for the sender of the message"""
 		return self.host().split('@')[1]
 
 	def ident(self):
-		"""
-		Return the ident
-		"""
+		"""Return the ident"""
 		return self.host().split('!')[1]
 
 	def message(self):
-		"""
-		Return the message
-		"""
+		"""Return the message"""
 		return self.details['message']
 
 	def nick(self):
-		"""
-		Return the message sender nick
-		"""
+		"""Return the message sender nick"""
 		return self.details['nick']
 
 	def server(self):
-		"""
-		Return the server
-		"""
+		"""Return the server"""
 		return self._server
 
 	def signal_data(self):
-		"""
-		Return the raw signal data
-		"""
+		"""Return the raw signal data"""
 		return self._signal_data
 
 	def is_channel(self):
-		"""
-		Return True if the message is from an IRC channel
-		"""
+		"""Return True if the message is from an IRC channel"""
 		return self.channel().startswith('#')
 
 	def is_ctcp(self):
-		"""
-		Return True if the message is a CTCP
-		"""
+		"""Return True if the message is a CTCP"""
 		message = self.message()
 		if message.startswith(CTCP_MARKER) and message.endswith(CTCP_MARKER):
 			return True
 		return False
 
 	def is_query(self):
-		"""
-		Return True if the message is from a query
-		"""
+		"""Return True if the message is from a query"""
 		return not self.is_channel()
 
 def whitelist_config_init():
-	"""
-	Initialize the whitelist configuration.
-	"""
+	"""Initialize the whitelist configuration."""
 	config_file = weechat.config_new("whitelist",
 			"whitelist_config_reload_cb",
 			""
@@ -394,10 +356,7 @@ def whitelist_config_reload_cb(userdata, config_file):
 	return weechat.WEECHAT_CONFIG_READ_OK
 
 def whitelist_config_option_change_cb(userdata, option):
-	"""
-	Callback when a config option was changed.
-	"""
-	section = weechat.config_search_section(config_file, userdata)
+	"""Callback when a config option was changed."""
 	weechat.prnt("", "Whitelisted {type} now: {values}".format(
 		type=userdata,
 		values=whitelist_config_get_value('whitelists', userdata))
@@ -405,9 +364,7 @@ def whitelist_config_option_change_cb(userdata, option):
 	return weechat.WEECHAT_RC_OK
 
 def whitelist_config_get_value(section_name, option_name):
-	"""
-	Return a value from the whitelist configuration.
-	"""
+	"""Return a value from the whitelist configuration."""
 	# This is a lot of work to just get the value of an option.
 	section = weechat.config_search_section(config_file, section_name)
 	option = weechat.config_search_option(config_file, section, option_name)
@@ -421,9 +378,7 @@ def whitelist_config_get_value(section_name, option_name):
 	return value
 
 def whitelist_config_set_value(section_name, option_name, value):
-	"""
-	Set a configuration option.
-	"""
+	"""Set a configuration option."""
 	section = weechat.config_search_section(config_file, section_name)
 	option = weechat.config_search_option(config_file, section, option_name)
 
@@ -431,26 +386,20 @@ def whitelist_config_set_value(section_name, option_name, value):
 	return rc
 
 def whitelist_infolist_get_value(infolist_name, server, element):
-	"""
-	Return the first instance of element from the infolist
-	"""
+	"""Return the first instance of element from the infolist"""
 	with InfolistGenerator(infolist_name, "", server) as infolist:
 		for row in infolist:
 			return row.get(element)
 
 def whitelist_get_channels(server):
-	"""
-	Get a list of channels on the given server.
-	"""
+	"""Get a list of channels on the given server."""
 	with InfolistGenerator("irc_channel", "", server) as infolist:
 		for row in infolist:
 			if row['name'].startswith('#'):
 				yield row['name']
 
 def whitelist_get_channel_nicks(server, channel):
-	"""
-	Get a list of nicks in the given channel on the given server
-	"""
+	"""Get a list of nicks in the given channel on the given server"""
 	with InfolistGenerator("irc_nick", "", "{server},{channel}".format(
 		server=server,
 		channel=channel)) as infolist:
@@ -458,9 +407,7 @@ def whitelist_get_channel_nicks(server, channel):
 			yield row['name']
 
 def whitelist_completion_sections(userdata, completion_item, buffer, completion):
-	"""
-	Add hooks for whitelist completion.
-	"""
+	"""Add hooks for whitelist completion."""
 	for section in SCRIPT_CONFIG['whitelists']:
 		weechat.hook_completion_list_add(completion,
 				section,
@@ -470,9 +417,7 @@ def whitelist_completion_sections(userdata, completion_item, buffer, completion)
 	return weechat.WEECHAT_RC_OK
 
 def whitelist_check(message):
-	"""
-	Return a boolean indicating if the given details are whitelisted or not.
-	"""
+	"""Return a boolean indicating if the given details are whitelisted or not."""
 	nick = message.nick()
 	host = message.host()
 	server = message.server()
@@ -525,7 +470,7 @@ def whitelist_check(message):
 			whitelisted_host = "{name}@{host}".format(
 					name=white_name,
 					host=white_host)
-		except ValueError as e:
+		except ValueError:
 			pass
 		# Check if the whitelisted host matches.
 		if re.match(host_to_regex(whitelisted_host), host):
@@ -555,8 +500,8 @@ def whitelist_check(message):
 
 	# Log the message
 	if whitelist_config_get_value('general', 'logging'):
-		whitelist_log_file = "{weechat_dir}/whitelist.log".format(
-				weechat_dir=weechat_dir)
+		whitelist_log_file = "{WEECHAT_DIR}/whitelist.log".format(
+				WEECHAT_DIR=WEECHAT_DIR)
 		with open(whitelist_log_file, 'a') as f:
 			f.write("{time}: [{server}] {nick} [{host}]: {message}\n".format(
 				time=time.asctime(),
@@ -570,9 +515,7 @@ def whitelist_check(message):
 	return True
 
 def whitelist_privmsg_modifier_cb(userdata, modifier, server, raw_irc_msg):
-	"""
-	Modifies the raw_irc_msg depending on whitelisted status.
-	"""
+	"""Modifies the raw_irc_msg depending on whitelisted status."""
 	message = Message(server, raw_irc_msg)
 
 	if message.is_query():
@@ -585,9 +528,7 @@ def whitelist_privmsg_modifier_cb(userdata, modifier, server, raw_irc_msg):
 	return raw_irc_msg
 
 def whitelist_list():
-	"""
-	Lists all whitelist details.
-	"""
+	"""Lists all whitelist details."""
 	for section in SCRIPT_CONFIG['whitelists']:
 		value = whitelist_config_get_value('whitelists', section)
 		weechat.prnt("", "{section}: {value}".format(
@@ -596,9 +537,7 @@ def whitelist_list():
 			)
 
 def whitelist_add(type, arg):
-	"""
-	Adds entries to the given whitelist type.
-	"""
+	"""Add entry to the given whitelist type."""
 	# Create a list from the current setting
 	values = whitelist_config_get_value('whitelists', type).split()
 	# Add the new value to the list.
@@ -611,9 +550,7 @@ def whitelist_add(type, arg):
 			)
 
 def whitelist_del(type, arg):
-	"""
-	Removes entries from the given whitelist type.
-	"""
+	"""Remove entry from the given whitelist type."""
 	values = whitelist_config_get_value('whitelists', type).split()
 	try:
 		values.remove(arg)
@@ -625,9 +562,7 @@ def whitelist_del(type, arg):
 			)
 
 def whitelist_cmd_split(count, args, default=None):
-	"""
-	Splits the whitelist command line
-	"""
+	"""Split the whitelist command line"""
 	# Hilarious.
 	args = args.split()
 	while len(args) < count:
@@ -636,16 +571,14 @@ def whitelist_cmd_split(count, args, default=None):
 	return args[:3]
 
 def whitelist_cmd(userdata, buffer, args):
-	"""
-	Parses whitelist commands and takes actions.
-	"""
+	"""Parse whitelist commands and take action."""
 	(cmd, type, arg) = whitelist_cmd_split(3, args)
 
 	if cmd in (None, '', 'list'):
 		whitelist_list()
 		return weechat.WEECHAT_RC_OK
 
-	if type in valid_option_types:
+	if type in VALID_OPTION_TYPES:
 		try:
 			type = WHITELIST_TYPE_ALIAS[type]
 		except:
@@ -662,7 +595,7 @@ def whitelist_cmd(userdata, buffer, args):
 				)
 	else:
 		weechat.prnt("", "Error. Valid whitelist types are: {types}.".format(
-			types=", ".join(valid_option_types))
+			types=", ".join(VALID_OPTION_TYPES))
 			)
 
 	return weechat.WEECHAT_RC_OK
@@ -672,10 +605,13 @@ if __name__ == '__main__':
 		config_file = whitelist_config_init()
 		if config_file:
 			whitelist_config_read(config_file)
-		valid_option_types = {k for k in SCRIPT_CONFIG['whitelists'].keys()}
-		valid_option_types |= {k for k in WHITELIST_TYPE_ALIAS.keys()}
-		weechat_version = weechat.info_get("version_number", "") or 0
-		weechat_dir = weechat.info_get("weechat_dir", "")
+		VALID_OPTION_TYPES = ([
+				k for k
+				in SCRIPT_CONFIG['whitelists'].keys()] +
+				[k for k
+				in WHITELIST_TYPE_ALIAS.keys()])
+		WEECHAT_VERSION = weechat.info_get("version_number", "") or 0
+		WEECHAT_DIR = weechat.info_get("weechat_dir", "")
 		weechat.hook_modifier("irc_in_privmsg",
 				"whitelist_privmsg_modifier_cb",
 				""
