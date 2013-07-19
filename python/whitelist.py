@@ -141,6 +141,7 @@ FIELD_TYPE_FUNC = {
 }
 
 CTCP_MARKER = '\001'
+CHANNEL_PREFIX = ('#', '&')
 
 # Host to RegEx mappings
 HTR = {x: x for x in (chr(x) for x in xrange(256))}
@@ -312,7 +313,7 @@ class Message(object):
 
     def is_channel(self):
         """Return True if the message is from an IRC channel"""
-        return self.channel().startswith('#')
+        return self.channel().startswith(CHANNEL_PREFIX)
 
     def is_ctcp(self):
         """Return True if the message is a CTCP"""
