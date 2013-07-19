@@ -565,7 +565,7 @@ def whitelist_del(listtype, arg):
 	try:
 		values.remove(arg)
 		whitelist_config_set_value('whitelists', listtype, " ".join(values))
-	except:
+	except ValueError:
 		weechat.prnt("", "Whitelist error. '{arg}' not found in '{type}'.".format(
 			arg=arg,
 			type=listtype)
@@ -591,7 +591,7 @@ def whitelist_cmd(userdata, buf, args):
 	if listtype in VALID_OPTION_TYPES:
 		try:
 			listtype = WHITELIST_TYPE_ALIAS[listtype]
-		except:
+		except KeyError:
 			pass
 		if arg is not None:
 			if cmd == 'add':
