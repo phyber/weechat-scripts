@@ -562,8 +562,8 @@ def whitelist_check(message):
 	# Place a notification in the status window
 	if config.get_value('general', 'notification'):
 		weechat.prnt("",
-				"[{server}] {nick} [{host}] "
-				"attempted to send you a private message.".format(
+			"[{server}] {nick} [{host}] "
+			"attempted to send you a private message.".format(
 			server=server,
 			nick=nick,
 			host=host)
@@ -571,7 +571,8 @@ def whitelist_check(message):
 
 	# Log the message
 	if config.get_value('general', 'logging'):
-		whitelist_log("{time}: [{server}] {nick} [{host}]: {message}\n".format(
+		whitelist_log(
+				"{time}: [{server}] {nick} [{host}]: {message}\n".format(
 				time=time.asctime(),
 				server=server,
 				nick=nick,
