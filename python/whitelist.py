@@ -44,7 +44,8 @@ SCRIPT_CONFIG = {
 		},
 		'network_channel_only': {
 			"type":			"boolean",
-			"desc":			"Only allow messages from a person if they're in a channel with you on the whitelisted network",
+			"desc":			"Only allow messages from a person if they're "
+							"in a channel with you on the whitelisted network",
 			"min":			0,
 			"max":			0,
 			"string_values":	"",
@@ -370,8 +371,8 @@ def whitelist_config_option_change_cb(userdata, option):
 def whitelist_config_get_value(section_name, option_name):
 	"""Return a value from the whitelist configuration."""
 	# This is a lot of work to just get the value of an option.
-	section = weechat.config_search_section(config_file, section_name)
-	option = weechat.config_search_option(config_file, section, option_name)
+	section = weechat.config_search_section(CONFIG_FILE, section_name)
+	option = weechat.config_search_option(CONFIG_FILE, section, option_name)
 
 	# Automatically choose the correct weechat.config_* function and call it.
 	config_function = "config_{type}".format(
@@ -383,11 +384,11 @@ def whitelist_config_get_value(section_name, option_name):
 
 def whitelist_config_set_value(section_name, option_name, value):
 	"""Set a configuration option."""
-	section = weechat.config_search_section(config_file, section_name)
-	option = weechat.config_search_option(config_file, section, option_name)
+	section = weechat.config_search_section(CONFIG_FILE, section_name)
+	option = weechat.config_search_option(CONFIG_FILE, section, option_name)
 
-	rc = weechat.config_option_set(option, value, 1)
-	return rc
+	ret = weechat.config_option_set(option, value, 1)
+	return ret
 
 def whitelist_infolist_get_value(infolist_name, server, element):
 	"""Return the first instance of element from the infolist"""
@@ -410,7 +411,7 @@ def whitelist_get_channel_nicks(server, channel):
 		for row in infolist:
 			yield row['name']
 
-def whitelist_completion_sections(userdata, completion_item, buffer, completion):
+def whitelist_completion_sections(userdata, completion_item, buf, completion):
 	"""Add hooks for whitelist completion."""
 	for section in SCRIPT_CONFIG['whitelists']:
 		weechat.hook_completion_list_add(completion,
@@ -509,10 +510,10 @@ def whitelist_check(message):
 
 	# Log the message
 	if whitelist_config_get_value('general', 'logging'):
-		whitelist_log_file = "{WEECHAT_DIR}/whitelist.log".format(
-				WEECHAT_DIR=WEECHAT_DIR)
-		with open(whitelist_log_file, 'a') as f:
-			f.write("{time}: [{server}] {nick} [{host}]: {message}\n".format(
+		whitelist_log_file = "{weechat_dir}/whitelist.log".format(
+				weechat_dir=WEECHAT_DIR)
+		with open(whitelist_log_file, 'a') as logfile:
+			logfile.write("{time}: [{server}] {nick} [{host}]: {message}\n".format(
 				time=time.asctime(),
 				server=server,
 				nick=nick,
@@ -545,29 +546,29 @@ def whitelist_list():
 			value=value)
 			)
 
-def whitelist_add(type, arg):
+def whitelist_add(listtype, arg):
 	"""Add entry to the given whitelist type."""
 	# Create a list from the current setting
-	values = whitelist_config_get_value('whitelists', type).split()
+	values = whitelist_config_get_value('whitelists', listtype).split()
 	# Add the new value to the list.
 	values.append(arg)
 	# Set the new option value. We use a set here to ensure uniqueness and
 	# we sort it just so that output is nicer.
 	whitelist_config_set_value('whitelists',
-			type,
+			listtype,
 			" ".join(sorted(set(values)))
 			)
 
-def whitelist_del(type, arg):
+def whitelist_del(listtype, arg):
 	"""Remove entry from the given whitelist type."""
-	values = whitelist_config_get_value('whitelists', type).split()
+	values = whitelist_config_get_value('whitelists', listtype).split()
 	try:
 		values.remove(arg)
-		whitelist_config_set_value('whitelists', type, " ".join(values))
+		whitelist_config_set_value('whitelists', listtype, " ".join(values))
 	except:
 		weechat.prnt("", "Whitelist error. '{arg}' not found in '{type}'.".format(
 			arg=arg,
-			type=type)
+			type=listtype)
 			)
 
 def whitelist_cmd_split(count, args, default=None):
@@ -579,28 +580,28 @@ def whitelist_cmd_split(count, args, default=None):
 	# Just return the first three args.
 	return args[:3]
 
-def whitelist_cmd(userdata, buffer, args):
+def whitelist_cmd(userdata, buf, args):
 	"""Parse whitelist commands and take action."""
-	(cmd, type, arg) = whitelist_cmd_split(3, args)
+	(cmd, listtype, arg) = whitelist_cmd_split(3, args)
 
 	if cmd in (None, '', 'list'):
 		whitelist_list()
 		return weechat.WEECHAT_RC_OK
 
-	if type in VALID_OPTION_TYPES:
+	if listtype in VALID_OPTION_TYPES:
 		try:
-			type = WHITELIST_TYPE_ALIAS[type]
+			listtype = WHITELIST_TYPE_ALIAS[listtype]
 		except:
 			pass
 		if arg is not None:
 			if cmd == 'add':
-				whitelist_add(type, arg)
+				whitelist_add(listtype, arg)
 
 			if cmd == 'del':
-				whitelist_del(type, arg)
+				whitelist_del(listtype, arg)
 		else:
 			weechat.prnt("", "Error. Must supply an argument to '{type}'.".format(
-				type=type)
+				type=listtype)
 				)
 	else:
 		weechat.prnt("", "Error. Valid whitelist types are: {types}.".format(
@@ -612,9 +613,9 @@ def whitelist_cmd(userdata, buffer, args):
 if __name__ == '__main__':
 	if weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR,
 			SCRIPT_VERSION, SCRIPT_LICENSE, SCRIPT_DESC, "", ""):
-		config_file = whitelist_config_init()
-		if config_file:
-			whitelist_config_read(config_file)
+		CONFIG_FILE = whitelist_config_init()
+		if CONFIG_FILE:
+			whitelist_config_read(CONFIG_FILE)
 		VALID_OPTION_TYPES = ([
 				k for k
 				in SCRIPT_CONFIG['whitelists'].keys()] +
