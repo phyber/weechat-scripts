@@ -422,6 +422,7 @@ def whitelist_completion_sections(userdata, completion_item, buf, completion):
 	return weechat.WEECHAT_RC_OK
 
 def whitelist_log(line):
+	"""Append a line to the whitelist log file."""
 	whitelist_log_file = "{weechat_dir}/whitelist.log".format(
 			weechat_dir=WEECHAT_DIR)
 	with open(whitelist_log_file, 'a') as logfile:
