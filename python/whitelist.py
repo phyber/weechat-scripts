@@ -122,6 +122,12 @@ WHITELIST_TYPE_ALIAS = {
 		'nick': "nicks",
 		}
 
+VALID_OPTION_TYPES = ([
+		k for k
+		in SCRIPT_CONFIG['whitelists'].keys()]
+		+ [k for k
+		in WHITELIST_TYPE_ALIAS.keys()])
+
 FIELD_TYPE_FUNC = {
 		# Not available to API
 		#'b': weechat.infolist_buffer,
@@ -665,18 +671,16 @@ def whitelist_cmd(userdata, buf, args):
 if __name__ == '__main__':
 	if weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR,
 			SCRIPT_VERSION, SCRIPT_LICENSE, SCRIPT_DESC, "", ""):
+
+		WEECHAT_DIR = weechat.info_get("weechat_dir", "")
+		WEECHAT_VERSION = weechat.info_get("version_number", "") or 0
+
 		config = Config('whitelist',
 				'whitelist_config_reload_cb',
 				'')
 		if config.is_ok():
 			config.read()
-		VALID_OPTION_TYPES = ([
-				k for k
-				in SCRIPT_CONFIG['whitelists'].keys()] +
-				[k for k
-				in WHITELIST_TYPE_ALIAS.keys()])
-		WEECHAT_VERSION = weechat.info_get("version_number", "") or 0
-		WEECHAT_DIR = weechat.info_get("weechat_dir", "")
+		
 		weechat.hook_modifier("irc_in_privmsg",
 				"whitelist_privmsg_modifier_cb",
 				""
