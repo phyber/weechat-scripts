@@ -182,6 +182,14 @@ class InfolistGenerator(object):
 	def __iter__(self):
 		return self
 
+	def next(self):
+		"""Return the next set of fields"""
+		if weechat.infolist_next(self._infolist):
+			fields = self.get_fields()
+			return fields
+		else:
+			raise StopIteration
+
 	def get_fields(self):
 		"""Return a dict of the fields in the current infolist position."""
 		fields = {}
@@ -196,14 +204,6 @@ class InfolistGenerator(object):
 				continue
 			fields[field_name] = field_value
 		return fields
-
-	def next(self):
-		"""Return the next set of fields"""
-		if weechat.infolist_next(self._infolist):
-			fields = self.get_fields()
-			return fields
-		else:
-			raise StopIteration
 
 class Message(object):
 	"""Parse raw signal_data from WeeChat into something more managable."""
@@ -314,94 +314,94 @@ class Message(object):
 			return True
 		return False
 
-def whitelist_config_init():
-	"""Initialize the whitelist configuration."""
-	config_file = weechat.config_new("whitelist",
-			"whitelist_config_reload_cb",
-			""
-			)
-	if not config_file:
-		return None
+class Config(object):
+	def __init__(self):
+		self._config_file = self.setup_config_file()
 
-	for section in SCRIPT_CONFIG:
-		config_section = weechat.config_new_section(
-			config_file,
-			section,
-			0, 0, "", "", "", "", "", "", "", "", "", ""
-		)
-		if not config_section:
-			weechat.config_free(config_file)
-			return None
-		for option_name, props in SCRIPT_CONFIG[section].items():
-			weechat.config_new_option(
-				config_file,
-				config_section,
-				option_name,
-				props['type'],
-				props['desc'],
-				props['string_values'],
-				props['min'],
-				props['max'],
-				props['default'],
-				props['default'],
-				0,
-				props['check_cb'],
-				"",
-				props['change_cb'],
-				props['change_data'],
-				props['delete_cb'],
+	def setup_config_file(self):
+		"""Initialize the whitelist configuration."""
+		config_file = weechat.config_new("whitelist",
+				"whitelist_config_reload_cb",
 				""
+				)
+		if not config_file:
+			return None
+
+		for section in SCRIPT_CONFIG:
+			config_section = weechat.config_new_section(
+				config_file,
+				section,
+				0, 0, "", "", "", "", "", "", "", "", "", ""
 			)
+			if not config_section:
+				weechat.config_free(config_file)
+				return None
+			for option_name, props in SCRIPT_CONFIG[section].items():
+				weechat.config_new_option(
+					config_file,
+					config_section,
+					option_name,
+					props['type'],
+					props['desc'],
+					props['string_values'],
+					props['min'],
+					props['max'],
+					props['default'],
+					props['default'],
+					0,
+					props['check_cb'],
+					"",
+					props['change_cb'],
+					props['change_data'],
+					props['delete_cb'],
+					""
+				)
 
-	return config_file
+		return config_file
 
-def whitelist_config_read(config_file):
-	"""
-	Read the whitelist config file.
-	"""
-	return weechat.config_read(config_file)
+	def is_ok(self):
+		return not self._config_file is None
 
-def whitelist_config_write(config_file):
-	"""
-	Write the whitelist config file.
-	"""
-	return weechat.config_write(config_file)
+	def read(self):
+		"""Read the whitelist config file."""
+		return weechat.config_read(self._config_file)
+
+	def write(self):
+		"""Write the whitelist config file."""
+		return weechat.config_write(self._config_file)
+
+	def get_value(self, section_name, option_name):
+		"""Return a value from the whitelist configuration."""
+		# This is a lot of work to just get the value of an option.
+		section = weechat.config_search_section(self._config_file, section_name)
+		option = weechat.config_search_option(self._config_file, section, option_name)
+
+		# Automatically choose the correct weechat.config_* function and call it.
+		config_function = "config_{type}".format(
+				type=SCRIPT_CONFIG[section_name][option_name]['type']
+				)
+		value = getattr(weechat, config_function)(option)
+		return value
+
+	def set_value(self, section_name, option_name, value):
+		"""Set a configuration option."""
+		section = weechat.config_search_section(self._config_file, section_name)
+		option = weechat.config_search_option(self._config_file, section, option_name)
+
+		ret = weechat.config_option_set(option, value, 1)
+		return ret
 
 def whitelist_config_reload_cb(userdata, config_file):
-	"""
-	Callback after the config file has been reloaded.
-	"""
+	"""Callback after the config file has been reloaded."""
 	return weechat.WEECHAT_CONFIG_READ_OK
 
 def whitelist_config_option_change_cb(userdata, option):
 	"""Callback when a config option was changed."""
 	weechat.prnt("", "Whitelisted {type} now: {values}".format(
 		type=userdata,
-		values=whitelist_config_get_value('whitelists', userdata))
+		values=config.get_value('whitelists', userdata))
 		)
 	return weechat.WEECHAT_RC_OK
-
-def whitelist_config_get_value(section_name, option_name):
-	"""Return a value from the whitelist configuration."""
-	# This is a lot of work to just get the value of an option.
-	section = weechat.config_search_section(CONFIG_FILE, section_name)
-	option = weechat.config_search_option(CONFIG_FILE, section, option_name)
-
-	# Automatically choose the correct weechat.config_* function and call it.
-	config_function = "config_{type}".format(
-			type=SCRIPT_CONFIG[section_name][option_name]['type']
-			)
-	value = getattr(weechat, config_function)(option)
-
-	return value
-
-def whitelist_config_set_value(section_name, option_name, value):
-	"""Set a configuration option."""
-	section = weechat.config_search_section(CONFIG_FILE, section_name)
-	option = weechat.config_search_option(CONFIG_FILE, section, option_name)
-
-	ret = weechat.config_option_set(option, value, 1)
-	return ret
 
 def whitelist_infolist_get_value(infolist_name, server, element):
 	"""Return the first instance of element from the infolist"""
@@ -444,13 +444,13 @@ def whitelist_log(line):
 def whitelist_check_server(nick, server):
 	"""Check if server is whitelisted"""
 	whitelist_networks = [x for x
-			in whitelist_config_get_value(
+			in config.get_value(
 				'whitelists', 'networks').split(" ")
 			if x]
 
 	if server in whitelist_networks:
 		# If we're only accepting messages from people in our channels...
-		if whitelist_config_get_value('general', 'network_channel_only'):
+		if config.get_value('general', 'network_channel_only'):
 			# Get a list of channels
 			for channel in whitelist_get_channels(server):
 				# And check if they're in it.
@@ -468,7 +468,7 @@ def whitelist_check_nick(nick, server):
 			"irc_server", server, "current_address"
 			)
 	for whitelisted_nick in [x for x
-			in whitelist_config_get_value(
+			in config.get_value(
 				'whitelists', 'nicks').split(" ")
 			if x]:
 		# 1. Simple check, is the nick itself whitelisted.
@@ -485,7 +485,7 @@ def whitelist_check_nick(nick, server):
 def whitelist_check_host(host, server):
 	"""Check if host is whitelisted"""
 	for whitelisted_host in [x for x
-			in whitelist_config_get_value(
+			in config.get_value(
 				'whitelists', 'hosts').split(" ")
 			if x]:
 		# Check for localised host
@@ -510,7 +510,7 @@ def whitelist_check_host(host, server):
 def whitelist_check_channel(nick, server):
 	"""Check if nick is on a whitelisted channel on server"""
 	for whitelisted_channel in [x for x
-			in whitelist_config_get_value(
+			in config.get_value(
 				'whitelists', 'channels').split(" ")
 			if x]:
 		# Check for localised channel
@@ -548,7 +548,7 @@ def whitelist_check(message):
 		return False
 
 	# Place a notification in the status window
-	if whitelist_config_get_value('general', 'notification'):
+	if config.get_value('general', 'notification'):
 		weechat.prnt("",
 				"[{server}] {nick} [{host}] "
 				"attempted to send you a private message.".format(
@@ -558,7 +558,7 @@ def whitelist_check(message):
 			)
 
 	# Log the message
-	if whitelist_config_get_value('general', 'logging'):
+	if config.get_value('general', 'logging'):
 		whitelist_log("{time}: [{server}] {nick} [{host}]: {message}\n".format(
 				time=time.asctime(),
 				server=server,
@@ -586,7 +586,7 @@ def whitelist_privmsg_modifier_cb(userdata, modifier, server, raw_irc_msg):
 def whitelist_list():
 	"""Lists all whitelist details."""
 	for section in SCRIPT_CONFIG['whitelists']:
-		value = whitelist_config_get_value('whitelists', section)
+		value = config.get_value('whitelists', section)
 		weechat.prnt("", "{section}: {value}".format(
 			section=section,
 			value=value)
@@ -595,22 +595,22 @@ def whitelist_list():
 def whitelist_add(listtype, arg):
 	"""Add entry to the given whitelist type."""
 	# Create a list from the current setting
-	values = whitelist_config_get_value('whitelists', listtype).split()
+	values = config.get_value('whitelists', listtype).split()
 	# Add the new value to the list.
 	values.append(arg)
 	# Set the new option value. We use a set here to ensure uniqueness and
 	# we sort it just so that output is nicer.
-	whitelist_config_set_value('whitelists',
+	config.set_value('whitelists',
 			listtype,
 			" ".join(sorted(set(values)))
 			)
 
 def whitelist_del(listtype, arg):
 	"""Remove entry from the given whitelist type."""
-	values = whitelist_config_get_value('whitelists', listtype).split()
+	values = config.get_value('whitelists', listtype).split()
 	try:
 		values.remove(arg)
-		whitelist_config_set_value('whitelists', listtype, " ".join(values))
+		config.set_value('whitelists', listtype, " ".join(values))
 	except ValueError:
 		weechat.prnt("", "Whitelist error. '{arg}' not found in '{type}'.".format(
 			arg=arg,
@@ -659,9 +659,9 @@ def whitelist_cmd(userdata, buf, args):
 if __name__ == '__main__':
 	if weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR,
 			SCRIPT_VERSION, SCRIPT_LICENSE, SCRIPT_DESC, "", ""):
-		CONFIG_FILE = whitelist_config_init()
-		if CONFIG_FILE:
-			whitelist_config_read(CONFIG_FILE)
+		config = Config()
+		if config.is_ok():
+			config.read()
 		VALID_OPTION_TYPES = ([
 				k for k
 				in SCRIPT_CONFIG['whitelists'].keys()] +
