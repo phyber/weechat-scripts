@@ -421,8 +421,13 @@ def whitelist_completion_sections(userdata, completion_item, buf, completion):
 				)
 	return weechat.WEECHAT_RC_OK
 
-def whitelist_check_server(nick, server, whitelist_networks):
+def whitelist_check_server(nick, server):
 	"""Check if server is whitelisted"""
+	whitelist_networks = [x for x
+			in whitelist_config_get_value(
+				'whitelists', 'networks').split(" ")
+			if x]
+
 	if server in whitelist_networks:
 		# If we're only accepting messages from people in our channels...
 		if whitelist_config_get_value('general', 'network_channel_only'):
@@ -506,13 +511,8 @@ def whitelist_check(message):
 	host = message.host()
 	server = message.server()
 
-	whitelist_networks = [x for x
-			in whitelist_config_get_value(
-				'whitelists', 'networks').split(" ")
-			if x]
-
 	# FIRST: Check if we have whitelisted things on this network.
-	if whitelist_check_server(nick, server, whitelist_networks):
+	if whitelist_check_server(nick, server):
 		return False
 
 	# SECOND: Check the nicks.
