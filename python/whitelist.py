@@ -421,21 +421,8 @@ def whitelist_completion_sections(userdata, completion_item, buf, completion):
 				)
 	return weechat.WEECHAT_RC_OK
 
-def whitelist_check(message):
-	"""Return a boolean indicating if the given details are whitelisted or not."""
-	nick = message.nick()
-	host = message.host()
-	server = message.server()
-
-	current_addr = whitelist_infolist_get_value(
-			"irc_server", server, "current_address"
-			)
-	whitelist_networks = [x for x
-			in whitelist_config_get_value(
-				'whitelists', 'networks').split(" ")
-			if x]
-
-	# FIRST: Check if we have whitelisted things on this network.
+def whitelist_check_server(nick, server, whitelist_networks):
+	"""Check if server is whitelisted"""
 	if server in whitelist_networks:
 		# If we're only accepting messages from people in our channels...
 		if whitelist_config_get_value('general', 'network_channel_only'):
@@ -444,30 +431,34 @@ def whitelist_check(message):
 				# And check if they're in it.
 				if nick in whitelist_get_channel_nicks(server, channel):
 					# Accept it if they are.
-					return False
+					return True
 		else:
 			# Otherwise just accept the message.
-			return False
+			return True
+	return False
 
-	# SECOND: Check the nicks.
+def whitelist_check_nick(nick, server):
+	"""Check if nick is whitelisted"""
+	current_addr = whitelist_infolist_get_value(
+			"irc_server", server, "current_address"
+			)
 	for whitelisted_nick in [x for x
 			in whitelist_config_get_value(
 				'whitelists', 'nicks').split(" ")
 			if x]:
 		# 1. Simple check, is the nick itself whitelisted.
-		nick_variations = [
-				nick,
+		nick_variations = [nick,
 				# Nick localised to the current server
 				"{nick}@{server}".format(nick=nick, server=server),
 				# Nick localised to the current server addr
-				"{nick}@{addr}".format(nick=nick, addr=current_addr),
-				]
+				"{nick}@{addr}".format(nick=nick, addr=current_addr)]
 		for variation in nick_variations:
 			if whitelisted_nick == variation:
-				return False
+				return True
+	return False
 
-	# THIRD: Check the hosts.
-	# Split up the hosts and filter them for empty strings.
+def whitelist_check_host(host, server):
+	"""Check if host is whitelisted"""
 	for whitelisted_host in [x for x
 			in whitelist_config_get_value(
 				'whitelists', 'hosts').split(" ")
@@ -488,10 +479,11 @@ def whitelist_check(message):
 			pass
 		# Check if the whitelisted host matches.
 		if re.match(host_to_regex(whitelisted_host), host):
-			return False
+			return True
+	return False
 
-	# FOURTH: Check the channels.
-	# Check each whitelisted channel to see if the nick is in one of those channels
+def whitelist_check_channel(nick, server):
+	"""Check if nick is on a whitelisted channel on server"""
 	for whitelisted_channel in [x for x
 			in whitelist_config_get_value(
 				'whitelists', 'channels').split(" ")
@@ -505,7 +497,35 @@ def whitelist_check(message):
 		channel_nicks = whitelist_get_channel_nicks(server, whitelisted_channel)
 		# 1. Check if the nick is in the channel.
 		if nick in channel_nicks:
-			return False
+			return True
+	return False
+
+def whitelist_check(message):
+	"""Return a boolean indicating if the given details are whitelisted or not."""
+	nick = message.nick()
+	host = message.host()
+	server = message.server()
+
+	whitelist_networks = [x for x
+			in whitelist_config_get_value(
+				'whitelists', 'networks').split(" ")
+			if x]
+
+	# FIRST: Check if we have whitelisted things on this network.
+	if whitelist_check_server(nick, server, whitelist_networks):
+		return False
+
+	# SECOND: Check the nicks.
+	if whitelist_check_nick(nick, server):
+		return False
+
+	# THIRD: Check the hosts.
+	if whitelist_check_host(host, server):
+		return False
+
+	# FOURTH: Check the channels.
+	if whitelist_check_channel(nick, server):
+		return False
 
 	# Place a notification in the status window
 	if whitelist_config_get_value('general', 'notification'):
