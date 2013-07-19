@@ -732,7 +732,8 @@ if __name__ == '__main__':
             "whitelist_privmsg_modifier_cb",
             "")
         weechat.hook_command(
-            SCRIPT_COMMAND, "Manage the whitelist",
+            SCRIPT_COMMAND,
+            "Manage the whitelist",
             # OPTION ARGUMENTS
             "list"
             " || add <type> <arg>"
@@ -754,8 +755,10 @@ if __name__ == '__main__':
             " || add %(whitelist_args)"
             " || del %(whitelist_args)",
             # COMMAND TO CALL + USERDATA
-            "whitelist_cmd", "")
-        weechat.hook_completion("whitelist_args",
-                                "list of whitelist arguments",
-                                "whitelist_completion_sections",
-                                "")
+            "whitelist_cmd",
+            "")
+        weechat.hook_completion(
+            "whitelist_args",
+            "list of whitelist arguments",
+            "whitelist_completion_sections",
+            "")
