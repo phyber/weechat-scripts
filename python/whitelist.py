@@ -446,7 +446,7 @@ def whitelist_get_channels(server):
     """Get a list of channels on the given server."""
     with InfolistGenerator("irc_channel", "", server) as infolist:
         for row in infolist:
-            if row['name'].startswith('#'):
+            if row['name'].startswith(CHANNEL_PREFIX):
                 yield row['name']
 
 
