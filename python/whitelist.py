@@ -438,7 +438,7 @@ def whitelist_config_option_change_cb(userdata, option):
     weechat.prnt(
         "", "Whitelisted {type} now: {values}".format(
         type=userdata,
-        values=config.get_value('whitelists', userdata)))
+        values=", ".join(config.get_value('whitelists', userdata).split())))
     return weechat.WEECHAT_RC_OK
 
 
