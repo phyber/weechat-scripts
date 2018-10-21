@@ -8,12 +8,15 @@ Python
 ======
 
  * Originals
-  * `infolist_generator.py`: Class to make handling infolists much less hateful.
+  * `infolist_generator.py`: Class to make handling infolists much less
+    hateful.
   * `message_parse.py`: Small example of parsing a PRIVMSG
   * `whitelist.py`: Block private messages from users not on your whitelist.
 
  * Modified
-  * `title.py`: Modifications to make `title.py` behave more like the Irssi equvalent.
+  * `auto_away.py`: Small modification to work with Python 3
+  * `title.py`: Modifications to make `title.py` behave more like the Irssi
+    equvalent.
 
 Ruby
 ====
