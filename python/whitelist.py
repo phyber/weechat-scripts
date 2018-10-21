@@ -9,7 +9,7 @@ import time
 
 SCRIPT_NAME = "whitelist"
 SCRIPT_AUTHOR = "phyber"
-SCRIPT_VERSION = "1.0"
+SCRIPT_VERSION = "1.1"
 SCRIPT_LICENSE = "GPL3"
 SCRIPT_DESC = "Block private messages from people not on your whitelist."
 SCRIPT_COMMAND = SCRIPT_NAME
@@ -144,7 +144,7 @@ CTCP_MARKER = '\001'
 CHANNEL_PREFIX = ('#', '&')
 
 # Host to RegEx mappings
-HTR = {x: x for x in (chr(x) for x in xrange(256))}
+HTR = {x: x for x in (chr(x) for x in range(256))}
 HTR['?'] = '.'
 HTR['*'] = '.*'
 
