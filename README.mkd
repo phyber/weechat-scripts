@@ -17,6 +17,7 @@ Python
   * `auto_away.py`: Small modification to work with Python 3
   * `title.py`: Modifications to make `title.py` behave more like the Irssi
     equvalent.
+  * `whois_in_active_buffer.py`: Small modification to work with Python 3
 
 Ruby
 ====
