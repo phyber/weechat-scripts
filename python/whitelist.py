@@ -7,6 +7,9 @@ except ImportError:
 import re
 import time
 
+# The minimum WeeChat version that we require, in hex.
+WEECHAT_VERSION_HEX_1_3_0 = 0x01030000
+
 SCRIPT_NAME = "whitelist"
 SCRIPT_AUTHOR = "phyber"
 SCRIPT_VERSION = "1.1"
@@ -145,9 +148,6 @@ HTR = {x: x for x in (chr(x) for x in range(256))}
 HTR['?'] = '.'
 HTR['*'] = '.*'
 
-# Name the magic numbers
-WEECHAT_VERSION_HEX_0_3_4 = 0x00030400
-
 
 def host_to_lower(host):
     """Convert the hostname portion of an address string to lowercase."""
@@ -237,31 +237,10 @@ class Message(object):
 
     def _parse_message(self):
         """Parse the signal_data"""
-        if int(WEECHAT_VERSION) >= WEECHAT_VERSION_HEX_0_3_4:
-            # Newer (>=0.3.4) versions of WeeChat can prepare a hash with most
-            # of what we want.
-            self.details = weechat.info_get_hashtable("irc_message_parse", {
-                "message":    self.signal_data(),
-                "server":    self.server()
-            })
-        else:
-            # WeeChat <0.3.4 we have to construct it ourselves.
-            (source, command, channel, message) = (
-                self._signal_data.split(" ", 3)
-            )
-            self.details = {}
-            self.details['arguments'] = "{channel} {message}".format(
-                channel=channel,
-                message=message)
-            self.details['channel'] = channel
-            self.details['command'] = command
-            self.details['host'] = source.lstrip(":")
-            self.details['nick'] = weechat.info_get(
-                "irc_nick_from_host",
-                self.signal_data())
-
-        # WeeChat leaves this important part to us. Get the actual message.
-        self.details['message'] = self.arguments().split(" :", 1)[1]
+        self.details = weechat.info_get_hashtable("irc_message_parse", {
+            "message": self.signal_data(),
+            "server":  self.server()
+        })
 
     def arguments(self):
         """Return the command arguments"""
@@ -294,7 +273,7 @@ class Message(object):
 
     def message(self):
         """Return the message"""
-        return self.details['message']
+        return self.text()
 
     def nick(self):
         """Return the message sender nick"""
@@ -308,9 +287,13 @@ class Message(object):
         """Return the raw signal data"""
         return self._signal_data
 
+    def text(self):
+        """Return the text"""
+        return self.details['text']
+
     def is_action(self):
         """Return True if message is an action."""
-        return self.is_ctcp() and self.message()[1:7] == 'ACTION'
+        return self.is_ctcp() and self.text()[1:7] == 'ACTION'
 
     def is_channel(self):
         """Return True if the message is from an IRC channel"""
@@ -318,9 +301,11 @@ class Message(object):
 
     def is_ctcp(self):
         """Return True if the message is a CTCP"""
-        message = self.message()
-        if message.startswith(CTCP_MARKER) and message.endswith(CTCP_MARKER):
+        text = self.text()
+
+        if text.startswith(CTCP_MARKER) and text.endswith(CTCP_MARKER):
             return True
+
         return False
 
     def is_query(self):
@@ -331,10 +316,13 @@ class Message(object):
         Other CTCPs will be treated as normal.
         """
         is_query = not self.is_channel()
+
         if is_query and self.is_action():
             return True
+
         if is_query and not self.is_ctcp():
             return True
+
         return False
 
 
@@ -477,6 +465,7 @@ def whitelist_completion_sections(userdata, completion_item, buf, completion):
             section,
             0,
             weechat.WEECHAT_LIST_POS_SORT)
+
     return weechat.WEECHAT_RC_OK
 
 
@@ -738,12 +727,28 @@ def whitelist_cmd(userdata, buf, args):
     return weechat.WEECHAT_RC_OK
 
 
+def version_check(required_version):
+    """
+    Checks that the current WeeChat version is not less than the required
+    version. Exits if version requirement isn't met.
+    """
+    current_version = weechat.info_get("version_number", "") or 0
+    if int(current_version) < required_version:
+        text = "{name} requires WeeChat >= 1.3.0".format(name=SCRIPT_NAME)
+        weechat.prnt("", text)
+
+        import sys
+        sys.exit(weechat.WEECHAT_RC_ERROR)
+
+
 if __name__ == '__main__':
     if weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION,
                         SCRIPT_LICENSE, SCRIPT_DESC, "", ""):
 
         WEECHAT_DIR = weechat.info_get("weechat_dir", "")
-        WEECHAT_VERSION = weechat.info_get("version_number", "") or 0
+
+        # We need >= 1.3.0 for the message parsing support
+        version_check(WEECHAT_VERSION_HEX_1_3_0)
 
         config = Config(
             'whitelist',
