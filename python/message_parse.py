@@ -5,6 +5,12 @@ except ImportError:
     print("You must run this inside weechat")
     sys.exit(1)
 
+SCRIPT_NAME = "message_parse"
+SCRIPT_AUTHOR = "phyber"
+SCRIPT_VERSION = "0.1"
+SCRIPT_LICENSE = "GPL3"
+SCRIPT_DESC = "Shows details about incoming private message."
+
 
 def parse_message(server, signal_data):
     """
@@ -67,7 +73,8 @@ def privmsg_modifier_cb(userdata, modifier, servername, raw_irc_msg):
 
 
 if __name__ == '__main__':
-    if weechat.register("message_parse", "phyber", "0.1", "GPL3", "Shows details about incoming private message.", "", ""):
+    if weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION,
+                        SCRIPT_LICENSE, SCRIPT_DESC, "", ""):
         version = weechat.info_get("version_number", "") or 0
         weechat.hook_signal("*,irc_in_privmsg", "privmsg_cb", "")
         weechat.hook_modifier("irc_in_privmsg", "privmsg_modifier_cb", "")
