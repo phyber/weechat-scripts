@@ -124,16 +124,13 @@ WHITELIST_TYPE_ALIAS = {
     'nick': "nicks",
 }
 
-VALID_OPTION_TYPES = ([
-    k for k
-    in SCRIPT_CONFIG['whitelists'].keys()]
-    +
-    [k for k
-     in WHITELIST_TYPE_ALIAS.keys()])
+VALID_OPTION_TYPES = (
+    [k for k in SCRIPT_CONFIG['whitelists'].keys()]
+    + [k for k in WHITELIST_TYPE_ALIAS.keys()]
+)
 
 FIELD_TYPE_FUNC = {
-    # Not available to API
-    #'b': weechat.infolist_buffer,
+    # 'b': weechat.infolist_buffer, # Not available to API
     'i': weechat.infolist_integer,
     'p': weechat.infolist_pointer,
     's': weechat.infolist_string,
@@ -147,6 +144,9 @@ CHANNEL_PREFIX = ('#', '&')
 HTR = {x: x for x in (chr(x) for x in range(256))}
 HTR['?'] = '.'
 HTR['*'] = '.*'
+
+# Name the magic numbers
+WEECHAT_VERSION_HEX_0_3_4 = 0x00030400
 
 
 def host_to_lower(host):
@@ -237,7 +237,7 @@ class Message(object):
 
     def _parse_message(self):
         """Parse the signal_data"""
-        if int(WEECHAT_VERSION) >= 0x00030400:
+        if int(WEECHAT_VERSION) >= WEECHAT_VERSION_HEX_0_3_4:
             # Newer (>=0.3.4) versions of WeeChat can prepare a hash with most
             # of what we want.
             self.details = weechat.info_get_hashtable("irc_message_parse", {
@@ -268,7 +268,8 @@ class Message(object):
         return self.details['arguments']
 
     def channel(self):
-        """Return channel portion of message.
+        """
+        Return channel portion of message.
 
         This might be better named "target", since it could be the
         nick of a user being queried.
@@ -323,7 +324,8 @@ class Message(object):
         return False
 
     def is_query(self):
-        """Return True if the message is from a query
+        """
+        Return True if the message is from a query
 
         CTCP ACTIONs are considered to be part of a query.
         Other CTCPs will be treated as normal.
@@ -350,6 +352,7 @@ class Config(object):
             self._config_name,
             self._reload_cb,
             self._reload_cb_data)
+
         if not config_file:
             return None
 
@@ -359,9 +362,11 @@ class Config(object):
                 section,
                 0, 0, "", "", "", "", "", "", "", "", "", ""
             )
+
             if not config_section:
                 weechat.config_free(config_file)
                 return None
+
             for option_name, props in SCRIPT_CONFIG[section].items():
                 weechat.config_new_option(
                     config_file,
@@ -387,7 +392,7 @@ class Config(object):
 
     def is_ok(self):
         """Return True if config was loaded properly."""
-        return not self._config_file is None
+        return self._config_file is not None
 
     def read(self):
         """Read the config file."""
@@ -403,6 +408,7 @@ class Config(object):
         section = weechat.config_search_section(
             self._config_file, section_name
         )
+
         option = weechat.config_search_option(
             self._config_file, section, option_name
         )
@@ -411,6 +417,7 @@ class Config(object):
         # function and call it.
         config_function = "config_{type}".format(
             type=SCRIPT_CONFIG[section_name][option_name]['type'])
+
         value = getattr(weechat, config_function)(option)
         return value
 
@@ -419,6 +426,7 @@ class Config(object):
         section = weechat.config_search_section(
             self._config_file,
             section_name)
+
         option = weechat.config_search_option(
             self._config_file,
             section,
@@ -435,10 +443,12 @@ def whitelist_config_reload_cb(userdata, config_file):
 
 def whitelist_config_option_change_cb(userdata, option):
     """Callback when a config option was changed."""
-    weechat.prnt(
-        "", "Whitelisted {type} now: {values}".format(
-        type=userdata,
-        values=", ".join(config.get_value('whitelists', userdata).split())))
+    values = ", ".join(config.get_value('whitelists', userdata).split())
+    text = "Whitelisted {type} now: {values}".format(
+            type=userdata,
+            values=values)
+
+    weechat.prnt("", text)
     return weechat.WEECHAT_RC_OK
 
 
@@ -452,10 +462,9 @@ def whitelist_get_channels(server):
 
 def whitelist_get_channel_nicks(server, channel):
     """Get a list of nicks in the given channel on the given server"""
-    with InfolistGenerator("irc_nick", "", "{server},{channel}".format(
-        server=server,
-        channel=channel)
-    ) as infolist:
+    arg = "{server},{channel}".format(server=server, channel=channel)
+
+    with InfolistGenerator("irc_nick", "", arg) as infolist:
         for row in infolist:
             yield row['name']
 
@@ -473,20 +482,19 @@ def whitelist_completion_sections(userdata, completion_item, buf, completion):
 
 def whitelist_log(line):
     """Append a line to the whitelist log file."""
-    whitelist_log_file = "{weechat_dir}/whitelist.log".format(
-        weechat_dir=WEECHAT_DIR)
-    with open(whitelist_log_file, 'a') as logfile:
+    log_file = "{weechat_dir}/whitelist.log".format(weechat_dir=WEECHAT_DIR)
+
+    with open(log_file, 'a') as logfile:
         logfile.write(line)
 
 
 def whitelist_check_server(nick, server):
     """Check if server is whitelisted"""
-    whitelist_networks = [x for x
-                          in config.get_value(
-                              'whitelists', 'networks').split(" ")
-                          if x]
+    networks = [x for x
+                in config.get_value('whitelists', 'networks').split(" ")
+                if x]
 
-    if server in whitelist_networks:
+    if server in networks:
         # If we're only accepting messages from people in our channels...
         if config.get_value('general', 'network_channel_only'):
             # Get a list of channels
@@ -498,6 +506,7 @@ def whitelist_check_server(nick, server):
         else:
             # Otherwise just accept the message.
             return True
+
     return False
 
 
@@ -506,29 +515,33 @@ def whitelist_check_nick(nick, server):
     with InfolistGenerator("irc_server", server, "") as infolist:
         current_address = infolist.get_field('current_address')
 
-    for whitelisted_nick in [x for x
-                             in config.get_value(
-                                 'whitelists', 'nicks').split(" ")
-                             if x]:
-        # 1. Simple check, is the nick itself whitelisted.
-        nick_variations = [
+    nicks = [x for x
+             in config.get_value('whitelists', 'nicks').split(" ")
+             if x]
+
+    for whitelisted_nick in nicks:
+        variations = [
+            # Simple check, is the nick itself whitelisted.
             nick,
             # Nick localised to the current server
             "{nick}@{server}".format(nick=nick, server=server),
             # Nick localised to the current server addr
-            "{nick}@{addr}".format(nick=nick, addr=current_address)]
-        for variation in nick_variations:
-            if whitelisted_nick == variation:
-                return True
+            "{nick}@{addr}".format(nick=nick, addr=current_address),
+            ]
+
+        if whitelisted_nick in variations:
+            return True
+
     return False
 
 
 def whitelist_check_host(host, server):
     """Check if host is whitelisted"""
-    for whitelisted_host in [x for x
-                             in config.get_value(
-                                 'whitelists', 'hosts').split(" ")
-                             if x]:
+    hosts = [x for x
+             in config.get_value('whitelists', 'hosts').split(" ")
+             if x]
+
+    for whitelisted_host in hosts:
         # Check for localised host
         # @ will always exist in hosts, so try to split and just pass
         # on ValueError, which means there was no @server portion.
@@ -536,41 +549,48 @@ def whitelist_check_host(host, server):
             (white_name, white_host, whitelisted_server) = (
                 whitelisted_host.split('@', 2)
             )
+
             # Skip if this host is for another server
             if server != whitelisted_server:
                 continue
+
             # Fixup the whitelisted_host
             whitelisted_host = "{name}@{host}".format(
                 name=white_name,
                 host=white_host)
         except ValueError:
             pass
+
         # Check if the whitelisted host matches.
         if re.match(host_to_regex(whitelisted_host), host):
             return True
+
     return False
 
 
 def whitelist_check_channel(nick, server):
     """Check if nick is on a whitelisted channel on server"""
-    for whitelisted_channel in [x for x
-                                in config.get_value(
-                                    'whitelists', 'channels').split(" ")
-                                if x]:
+    channels = [x for x
+                in config.get_value('whitelists', 'channels').split(" ")
+                if x]
+
+    for channel in channels:
         # Check for localised channel
-        if '@' in whitelisted_channel:
-            (whitelisted_channel, whitelisted_server) = (
-                whitelisted_channel.split('@', 1)
+        if '@' in channel:
+            (channel, whitelisted_server) = (
+                channel.split('@', 1)
             )
+
             # Skip if channel is for another server
             if server != whitelisted_server:
                 continue
-        channel_nicks = whitelist_get_channel_nicks(
-            server,
-            whitelisted_channel)
-        # 1. Check if the nick is in the channel.
+
+        channel_nicks = whitelist_get_channel_nicks(server, channel)
+
+        # Check if the nick is in the channel.
         if nick in channel_nicks:
             return True
+
     return False
 
 
@@ -638,18 +658,18 @@ def whitelist_list():
     """Lists all whitelist details."""
     for section in SCRIPT_CONFIG['whitelists']:
         value = config.get_value('whitelists', section)
-        weechat.prnt(
-            "",
-            "{section}: {value}".format(
-                section=section, value=value))
+        text = "{section}: {value}".format(section=section, value=value)
+        weechat.prnt("", text)
 
 
 def whitelist_add(listtype, arg):
     """Add entry to the given whitelist type."""
     # Create a list from the current setting
     values = config.get_value('whitelists', listtype).split()
+
     # Add the new value to the list.
     values.append(arg)
+
     # Set the new option value. We use a set here to ensure uniqueness and
     # we sort it just so that output is nicer.
     config.set_value(
@@ -661,23 +681,25 @@ def whitelist_add(listtype, arg):
 def whitelist_del(listtype, arg):
     """Remove entry from the given whitelist type."""
     values = config.get_value('whitelists', listtype).split()
+
     try:
         values.remove(arg)
         config.set_value('whitelists', listtype, " ".join(values))
     except ValueError:
-        weechat.prnt(
-            "",
-            "Whitelist error. '{arg}' not found in '{type}'.".format(
-                arg=arg, type=listtype))
+        text = "Whitelist error. '{arg}' not found in '{type}'.".format(
+                arg=arg,
+                type=listtype)
+
+        weechat.prnt("", text)
 
 
 def whitelist_cmd_split(count, args, default=None):
-    """Split the whitelist command line
-    """
+    """Split the whitelist command line"""
     # Hilarious.
     args = args.split()
     while len(args) < count:
         args.append(default)
+
     # Just return the first three args.
     return args[:3]
 
@@ -695,6 +717,7 @@ def whitelist_cmd(userdata, buf, args):
             listtype = WHITELIST_TYPE_ALIAS[listtype]
         except KeyError:
             pass
+
         if arg is not None:
             if cmd == 'add':
                 whitelist_add(listtype, arg)
@@ -714,9 +737,10 @@ def whitelist_cmd(userdata, buf, args):
 
     return weechat.WEECHAT_RC_OK
 
+
 if __name__ == '__main__':
-    if weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR,
-                        SCRIPT_VERSION, SCRIPT_LICENSE, SCRIPT_DESC, "", ""):
+    if weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION,
+                        SCRIPT_LICENSE, SCRIPT_DESC, "", ""):
 
         WEECHAT_DIR = weechat.info_get("weechat_dir", "")
         WEECHAT_VERSION = weechat.info_get("version_number", "") or 0
@@ -725,6 +749,7 @@ if __name__ == '__main__':
             'whitelist',
             'whitelist_config_reload_cb',
             '')
+
         if config.is_ok():
             config.read()
 
@@ -732,6 +757,7 @@ if __name__ == '__main__':
             "irc_in_privmsg",
             "whitelist_privmsg_modifier_cb",
             "")
+
         weechat.hook_command(
             SCRIPT_COMMAND,
             "Manage the whitelist",
@@ -758,6 +784,7 @@ if __name__ == '__main__':
             # COMMAND TO CALL + USERDATA
             "whitelist_cmd",
             "")
+
         weechat.hook_completion(
             "whitelist_args",
             "list of whitelist arguments",
