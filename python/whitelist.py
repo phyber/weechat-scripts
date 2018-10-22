@@ -12,7 +12,7 @@ WEECHAT_VERSION_HEX_1_3_0 = 0x01030000
 
 SCRIPT_NAME = "whitelist"
 SCRIPT_AUTHOR = "phyber"
-SCRIPT_VERSION = "1.1"
+SCRIPT_VERSION = "1.2"
 SCRIPT_LICENSE = "GPL3"
 SCRIPT_DESC = "Block private messages from people not on your whitelist."
 SCRIPT_COMMAND = SCRIPT_NAME
@@ -194,13 +194,17 @@ class InfolistGenerator(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         """Return the next set of fields"""
         if weechat.infolist_next(self._infolist):
             fields = self.get_fields()
             return fields
         else:
             raise StopIteration
+
+    def next(self):
+        """Python 2 compat"""
+        return self.__next__()
 
     def get_fields(self):
         """Return a dict of the fields in the current infolist position."""
